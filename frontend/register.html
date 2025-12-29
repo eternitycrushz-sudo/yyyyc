@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>抖音电商热点数据可视化分析系统 - 注册</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="js/toast.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased min-h-screen flex flex-col">
+
+<div id="app">
+    <div class="relative flex min-h-screen w-full flex-col justify-center overflow-hidden py-6 sm:py-12">
+        <!-- 背景 -->
+        <div class="absolute inset-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2832&auto=format&fit=crop')] bg-cover bg-center opacity-10 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/95 to-background-dark/80 pointer-events-none"></div>
+        
+        <div class="relative w-full max-w-md mx-auto px-4">
+            <div class="bg-surface-dark rounded-2xl p-8 border border-input-border shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                <!-- Logo -->
+                <div class="flex items-center justify-center gap-3 mb-8">
+                    <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary text-2xl">analytics</span>
+                    </div>
+                    <span class="font-bold text-xl">数据分析系统</span>
+                </div>
+                
+                <div class="mb-6 text-center">
+                    <h3 class="text-2xl font-bold mb-2">创建账号</h3>
+                    <p class="text-text-secondary text-sm">填写以下信息完成注册</p>
+                </div>
+                
+                <form @submit.prevent="handleRegister" class="flex flex-col gap-4">
+                    <!-- 错误/成功提示 -->
+                    <transition name="fade">
+                        <div v-if="message" :class="['p-3 rounded-lg text-sm', 
+                            success ? 'bg-green-500/10 border border-green-500/30 text-green-400' 
+                                    : 'bg-red-500/10 border border-red-500/30 text-red-400']">
+                            {{ message }}
+                        </div>
+                    </transition>
+                    
+                    <!-- 用户名 -->
+                    <label class="flex flex-col gap-2">
+                        <span class="text-sm font-medium">用户名 <span class="text-red-400">*</span></span>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
+                                <span class="material-symbols-outlined text-xl">person</span>
+                            </div>
+                            <input v-model="form.username"
+                                   class="w-full h-12 pl-11 pr-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   placeholder="请输入用户名（3-20位）"
+                                   type="text"
+                                   maxlength="20"/>
+                        </div>
+                    </label>
+                    
+                    <!-- 昵称 -->
+                    <label class="flex flex-col gap-2">
+                        <span class="text-sm font-medium">昵称</span>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
+                                <span class="material-symbols-outlined text-xl">badge</span>
+                            </div>
+                            <input v-model="form.nickname"
+                                   class="w-full h-12 pl-11 pr-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   placeholder="请输入昵称（选填）"
+                                   type="text"
+                                   maxlength="50"/>
+                        </div>
+                    </label>
+                    
+                    <!-- 密码 -->
+                    <label class="flex flex-col gap-2">
+                        <span class="text-sm font-medium">密码 <span class="text-red-400">*</span></span>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
+                                <span class="material-symbols-outlined text-xl">lock</span>
+                            </div>
+                            <input v-model="form.password"
+                                   :type="showPassword ? 'text' : 'password'"
+                                   class="w-full h-12 pl-11 pr-11 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   placeholder="请输入密码（至少6位）"
+                                   maxlength="32"/>
+                            <button @click="showPassword = !showPassword"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-4 text-text-secondary hover:text-primary transition-colors"
+                                    type="button">
+                                <span class="material-symbols-outlined text-xl">
+                                    {{ showPassword ? 'visibility_off' : 'visibility' }}
+                                </span>
+                            </button>
+                        </div>
+                    </label>
+                    
+                    <!-- 确认密码 -->
+                    <label class="flex flex-col gap-2">
+                        <span class="text-sm font-medium">确认密码 <span class="text-red-400">*</span></span>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
+                                <span class="material-symbols-outlined text-xl">lock</span>
+                            </div>
+                            <input v-model="form.confirmPassword"
+                                   :type="showPassword ? 'text' : 'password'"
+                                   class="w-full h-12 pl-11 pr-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   placeholder="请再次输入密码"/>
+                        </div>
+                    </label>
+                    
+                    <!-- 注册按钮 -->
+                    <button :disabled="loading"
+                            class="mt-2 flex w-full items-center justify-center rounded-lg bg-primary h-12 px-6 text-background-dark text-base font-bold hover:bg-[#0ebacb] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(19,200,236,0.3)] hover:shadow-[0_0_25px_rgba(19,200,236,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            type="submit">
+                        <span v-if="loading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                        {{ loading ? '注册中...' : '立即注册' }}
+                    </button>
+                    
+                    <!-- 登录链接 -->
+                    <div class="mt-2 text-center">
+                        <p class="text-sm text-text-secondary">
+                            已有账号? 
+                            <a class="font-medium text-primary hover:text-primary/80 transition-colors ml-1" href="login.html">立即登录</a>
+                        </p>
+                    </div>
+                </form>
+                
+                <!-- 底部版权 -->
+                <div class="mt-8 text-center">
+                    <p class="text-xs text-slate-600">© 2024 Douyin E-commerce Analysis System</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive } = Vue
+
+const API_BASE = 'http://localhost:5000/api'
+
+createApp({
+    setup() {
+        const form = reactive({
+            username: '',
+            nickname: '',
+            password: '',
+            confirmPassword: ''
+        })
+        
+        const loading = ref(false)
+        const message = ref('')
+        const success = ref(false)
+        const showPassword = ref(false)
+        
+        const handleRegister = async () => {
+            message.value = ''
+            success.value = false
+            
+            // 表单验证
+            if (!form.username.trim()) {
+                Toast.warning('请输入用户名')
+                return
+            }
+            if (form.username.length < 3) {
+                Toast.warning('用户名至少3个字符')
+                return
+            }
+            if (!form.password) {
+                Toast.warning('请输入密码')
+                return
+            }
+            if (form.password.length < 6) {
+                Toast.warning('密码至少6位')
+                return
+            }
+            if (form.password !== form.confirmPassword) {
+                Toast.error('两次密码输入不一致')
+                return
+            }
+            
+            loading.value = true
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: form.username.trim(),
+                        password: form.password,
+                        nickname: form.nickname.trim() || form.username.trim()
+                    })
+                })
+                
+                const result = await response.json()
+                
+                if (result.success) {
+                    Toast.success('注册成功！3秒后跳转到登录页...')
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login.html'
+                    }, 3000)
+                } else {
+                    Toast.error(result.message || '注册失败')
+                }
+            } catch (e) {
+                console.error('Register error:', e)
+                Toast.error('网络错误，请检查后端服务')
+            } finally {
+                loading.value = false
+            }
+        }
+        
+        return {
+            form,
+            loading,
+            message,
+            success,
+            showPassword,
+            handleRegister
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

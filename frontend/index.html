@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>抖音电商热点数据可视化分析系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="js/toast.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
+        .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
+    </style>
+</head>
+<body class="bg-background-dark font-sans text-white antialiased">
+
+<div id="app" class="flex h-screen">
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-surface-dark border-r border-input-border flex flex-col">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">analytics</span>
+                </div>
+                <span class="font-bold text-lg">数据分析系统</span>
+            </div>
+        </div>
+        
+        <!-- 菜单 -->
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
+            
+            <a v-for="item in menuItems" :key="item.path"
+               :href="item.path"
+               :class="['sidebar-item flex items-center gap-3 px-6 py-3 text-sm transition-colors', 
+                        currentPath === item.path ? 'active text-primary' : 'text-gray-300 hover:text-white']">
+                <span class="material-symbols-outlined text-xl">{{ item.icon }}</span>
+                {{ item.name }}
+            </a>
+        </nav>
+        
+        <!-- 用户信息 -->
+        <div class="p-4 border-t border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ user?.nickname || user?.username }}</div>
+                    <div class="text-xs text-text-secondary">{{ user?.roles?.[0]?.name || '用户' }}</div>
+                </div>
+                <button @click="handleLogout" class="p-2 hover:bg-input-bg rounded-lg transition-colors" title="退出登录">
+                    <span class="material-symbols-outlined text-text-secondary hover:text-red-400">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- 顶部栏 -->
+        <header class="h-16 bg-surface-dark border-b border-input-border flex items-center justify-between px-6">
+            <h1 class="text-xl font-semibold">{{ currentMenu?.name || '首页' }}</h1>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-text-secondary">{{ currentTime }}</span>
+            </div>
+        </header>
+        
+        <!-- 内容区 -->
+        <div class="flex-1 overflow-auto p-6">
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div v-for="stat in stats" :key="stat.label" 
+                     class="bg-card-dark rounded-xl p-6 border border-input-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-text-secondary text-sm">{{ stat.label }}</span>
+                        <span :class="['material-symbols-outlined text-2xl', stat.color]">{{ stat.icon }}</span>
+                    </div>
+                    <div class="text-3xl font-bold mb-1">{{ stat.value }}</div>
+                    <div class="text-xs text-text-secondary">{{ stat.desc }}</div>
+                </div>
+            </div>
+            
+            <!-- 快捷操作 -->
+            <div class="bg-card-dark rounded-xl p-6 border border-input-border mb-6">
+                <h2 class="text-lg font-semibold mb-4">快捷操作</h2>
+                <div class="flex flex-wrap gap-4">
+                    <button @click="startListCrawler" 
+                            :disabled="crawlerLoading"
+                            class="flex items-center gap-2 px-4 py-2 bg-primary text-background-dark rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        <span class="material-symbols-outlined text-xl">play_arrow</span>
+                        启动列表爬虫
+                    </button>
+                    <button @click="showCrawlerConfig = true"
+                            class="flex items-center gap-2 px-4 py-2 bg-input-bg border border-input-border rounded-lg hover:border-primary transition-colors">
+                        <span class="material-symbols-outlined text-xl">settings</span>
+                        爬虫配置
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 最近任务 -->
+            <div class="bg-card-dark rounded-xl p-6 border border-input-border">
+                <h2 class="text-lg font-semibold mb-4">系统状态</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-input-bg rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-green-400">check_circle</span>
+                            <span>后端服务</span>
+                        </div>
+                        <span class="text-green-400 text-sm">运行中</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-input-bg rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span :class="['material-symbols-outlined', mqStatus ? 'text-green-400' : 'text-red-400']">
+                                {{ mqStatus ? 'check_circle' : 'error' }}
+                            </span>
+                            <span>RabbitMQ</span>
+                        </div>
+                        <span :class="[mqStatus ? 'text-green-400' : 'text-red-400', 'text-sm']">
+                            {{ mqStatus ? '已连接' : '未连接' }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-input-bg rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-green-400">check_circle</span>
+                            <span>数据库</span>
+                        </div>
+                        <span class="text-green-400 text-sm">已连接</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 爬虫配置弹窗 -->
+    <div v-if="showCrawlerConfig" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-surface-dark rounded-xl p-6 w-full max-w-md border border-input-border">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold">爬虫配置</h3>
+                <button @click="showCrawlerConfig = false" class="text-text-secondary hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <label class="block">
+                    <span class="text-sm text-text-secondary mb-1 block">起始页码</span>
+                    <input v-model.number="crawlerConfig.start_page" type="number" min="1"
+                           class="w-full h-10 px-3 rounded-lg bg-input-bg border border-input-border text-white focus:border-primary focus:ring-1 focus:ring-primary"/>
+                </label>
+                <label class="block">
+                    <span class="text-sm text-text-secondary mb-1 block">结束页码</span>
+                    <input v-model.number="crawlerConfig.end_page" type="number" min="1"
+                           class="w-full h-10 px-3 rounded-lg bg-input-bg border border-input-border text-white focus:border-primary focus:ring-1 focus:ring-primary"/>
+                </label>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button @click="showCrawlerConfig = false"
+                        class="flex-1 h-10 rounded-lg border border-input-border hover:border-primary transition-colors">
+                    取消
+                </button>
+                <button @click="startListCrawler(); showCrawlerConfig = false"
+                        class="flex-1 h-10 rounded-lg bg-primary text-background-dark font-medium hover:bg-primary/90 transition-colors">
+                    开始爬取
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue
+
+const API_BASE = 'http://localhost:5000/api'
+
+createApp({
+    setup() {
+        const user = ref(null)
+        const currentTime = ref('')
+        const mqStatus = ref(false)
+        const crawlerLoading = ref(false)
+        const showCrawlerConfig = ref(false)
+        
+        const crawlerConfig = reactive({
+            start_page: 1,
+            end_page: 5
+        })
+        
+        const menuItems = [
+            { name: '首页', path: 'index.html', icon: 'home' },
+            { name: '商品数据', path: 'products.html', icon: 'inventory_2' },
+            { name: '达人分析', path: 'influencers.html', icon: 'person_search' },
+            { name: '直播分析', path: 'live.html', icon: 'live_tv' },
+            { name: '视频分析', path: 'videos.html', icon: 'play_circle' },
+            { name: '爬虫任务', path: 'crawler.html', icon: 'bug_report' },
+            { name: '系统设置', path: 'settings.html', icon: 'settings' },
+        ]
+        
+        const currentPath = ref('index.html')
+        const currentMenu = computed(() => menuItems.find(m => m.path === currentPath.value))
+        
+        const stats = ref([
+            { label: '商品总数', value: '12,458', icon: 'inventory_2', color: 'text-primary', desc: '已采集商品' },
+            { label: '今日新增', value: '328', icon: 'add_circle', color: 'text-green-400', desc: '较昨日 +12%' },
+            { label: '达人数量', value: '5,621', icon: 'group', color: 'text-purple-400', desc: '关联达人' },
+            { label: '任务队列', value: '15', icon: 'queue', color: 'text-yellow-400', desc: '待处理任务' },
+        ])
+        
+        // 获取 token
+        const getToken = () => localStorage.getItem('token')
+        
+        // API 请求封装
+        const request = async (url, options = {}) => {
+            const token = getToken()
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...options.headers
+            }
+            
+            const response = await fetch(`${API_BASE}${url}`, {
+                ...options,
+                headers
+            })
+            
+            if (response.status === 401) {
+                // Token 过期，跳转登录
+                localStorage.removeItem('token')
+                localStorage.removeItem('user')
+                window.location.href = 'login.html'
+                return
+            }
+            
+            return response.json()
+        }
+        
+        // 检查登录状态
+        const checkAuth = () => {
+            const token = getToken()
+            const savedUser = localStorage.getItem('user')
+            
+            if (!token || !savedUser) {
+                window.location.href = 'login.html'
+                return
+            }
+            
+            user.value = JSON.parse(savedUser)
+        }
+        
+        // 退出登录
+        const handleLogout = async () => {
+            await request('/auth/logout', { method: 'POST' })
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = 'login.html'
+        }
+        
+        // 启动列表爬虫
+        const startListCrawler = async () => {
+            crawlerLoading.value = true
+            try {
+                const result = await request('/mq/start_list_crawler', {
+                    method: 'POST',
+                    body: JSON.stringify(crawlerConfig)
+                })
+                
+                if (result.success) {
+                    Toast.success(`任务已发送！任务ID: ${result.data.task_id}`)
+                    if (result.data.note) {
+                        setTimeout(() => Toast.info(result.data.note), 500)
+                    }
+                } else {
+                    Toast.error('发送失败: ' + result.message)
+                }
+            } catch (e) {
+                Toast.error('请求失败: ' + e.message)
+            } finally {
+                crawlerLoading.value = false
+            }
+        }
+        
+        // 更新时间
+        let timeInterval
+        const updateTime = () => {
+            const now = new Date()
+            currentTime.value = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+        }
+        
+        // 检查 MQ 状态
+        const checkMqStatus = async () => {
+            try {
+                const result = await request('/health')
+                mqStatus.value = result.success
+            } catch {
+                mqStatus.value = false
+            }
+        }
+        
+        onMounted(() => {
+            checkAuth()
+            updateTime()
+            timeInterval = setInterval(updateTime, 1000)
+            checkMqStatus()
+        })
+        
+        onUnmounted(() => {
+            clearInterval(timeInterval)
+        })
+        
+        return {
+            user,
+            currentTime,
+            menuItems,
+            currentPath,
+            currentMenu,
+            stats,
+            mqStatus,
+            crawlerLoading,
+            showCrawlerConfig,
+            crawlerConfig,
+            handleLogout,
+            startListCrawler
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

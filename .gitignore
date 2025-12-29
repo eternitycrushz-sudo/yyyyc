@@ -3,6 +3,33 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# IDE
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Chrome user data (browser cache)
+crawler/chrome_user_data/
+
+# Temporary files
+temp
+*.tmp
+*.temp
+
+# Screenshots and images
+*.png
+
+# JSON data files
+*_data.json
+*_api.json
+douyin_cookies.json
+
+# Driver executables (large binary files)
+crawler/driver/
+
 # C extensions
 *.so
 
