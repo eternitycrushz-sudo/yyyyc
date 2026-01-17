@@ -3,33 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# IDE
-.idea/
-.vscode/
-
-# Logs
-logs/
-*.log
-
-# Chrome user data (browser cache)
-crawler/chrome_user_data/
-
-# Temporary files
-temp
-*.tmp
-*.temp
-
-# Screenshots and images
-*.png
-
-# JSON data files
-*_data.json
-*_api.json
-douyin_cookies.json
-
-# Driver executables (large binary files)
-crawler/driver/
-
 # C extensions
 *.so
 
@@ -135,6 +108,7 @@ celerybeat.pid
 .env
 .venv
 env/
+
 venv/
 ENV/
 env.bak/
@@ -163,3 +137,14 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Chrome user data (Selenium)
+chrome_user_data/
+
+# Project specific
+douyin_env/
+crawler_env/
+driver/
+*.json
+*.png
+douyin_cookies.json

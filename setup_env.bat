@@ -42,6 +42,8 @@ if errorlevel 1 (
 )
 
 pip install -r requirements.txt
+
+pip install -r ./backend/requirements
 :: 6. 成功提示
 echo.
 echo %green%✅ 环境配置完成！%reset%

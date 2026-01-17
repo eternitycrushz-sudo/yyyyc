@@ -36,7 +36,11 @@ import argparse
 import multiprocessing
 import signal
 import sys
+import os
 from typing import List
+
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from logger import init_logger, get_logger
 import logging
