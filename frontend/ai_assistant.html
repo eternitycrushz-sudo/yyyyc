@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html class="dark" lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/toast.js"></script>
-    <!-- Markdown 渲染库 -->
+    <!-- Markdown 渲染 -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script>
         // 配置 Tailwind
@@ -156,12 +156,16 @@
         </div>
         
         <div class="flex-1 p-4 overflow-y-auto">
-            <h3 class="text-sm text-text-secondary mb-3 font-semibold">快捷问题</h3>
+            <h3 class="text-sm text-text-secondary mb-3 font-semibold">会话历史</h3>
+            <div v-if="sessions.length === 0" class="text-xs text-text-secondary/80 px-2 py-2">
+                暂无历史会话
+            </div>
             <div class="space-y-2">
-                <button v-for="(suggestion, idx) in suggestions" :key="idx"
-                        @click="sendSuggestion(suggestion)"
-                        class="w-full text-left p-3 rounded-lg bg-input-bg hover:bg-primary/10 text-sm transition-colors border border-transparent hover:border-primary/30">
-                    {{ suggestion }}
+                <button v-for="session in sessions" :key="session.session_id"
+                        @click="selectSession(session)"
+                        :class="['w-full text-left p-3 rounded-lg text-sm transition-colors border', session.session_id === sessionId ? 'bg-primary/10 border-primary/40 text-white' : 'bg-input-bg border-transparent hover:border-primary/30']">
+                    <div class="font-medium truncate">{{ formatSessionTitle(session) }}</div>
+                    <div class="text-xs text-text-secondary mt-1">{{ formatSessionTime(session.updated_at || session.created_at) }}</div>
                 </button>
             </div>
         </div>
@@ -180,6 +184,13 @@
                     <p class="text-xs text-text-secondary">电商数据分析专家</p>
                 </div>
             </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-text-secondary">会话：{{ shortSessionId }}</span>
+                <button @click="createNewSession"
+                        class="h-9 px-3 rounded-md border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-sm">
+                    新建会话
+                </button>
+            </div>
         </header>
         
         <!-- 消息列表 -->
@@ -191,6 +202,20 @@
                 </div>
                 <h2 class="text-xl font-bold mb-2">你好！我是 AI 智能助手</h2>
                 <p class="text-text-secondary">我可以帮你分析电商数据、推荐商品、解答问题</p>
+            </div>
+
+            <!-- 推荐问题区域 -->
+            <div v-if="showSuggestions" class="flex justify-center">
+                <div class="w-full max-w-3xl bg-surface-dark/60 border border-input-border/60 rounded-2xl p-4">
+                    <div class="text-sm text-text-secondary mb-3">推荐问题</div>
+                    <div class="flex flex-wrap gap-3">
+                        <button v-for="(suggestion, idx) in suggestions" :key="idx"
+                                @click="sendSuggestion(suggestion)"
+                                class="px-4 py-2 rounded-full bg-input-bg text-sm text-text-secondary hover:text-white hover:bg-primary/20 border border-transparent hover:border-primary/30 transition-colors">
+                            {{ suggestion }}
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- 消息气泡 -->
@@ -252,9 +277,26 @@
 </div>
 
 <script>
-const { createApp, ref, onMounted, nextTick } = Vue
+const { createApp, ref, onMounted, nextTick, computed } = Vue
 
 const API_BASE = 'http://localhost:5000/api'
+const SESSION_KEY = 'ai_session_id'
+
+const createSessionId = () => {
+    if (window.crypto && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    return `sess_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`
+}
+
+const loadSessionId = () => {
+    let sessionId = localStorage.getItem(SESSION_KEY)
+    if (!sessionId) {
+        sessionId = createSessionId()
+        localStorage.setItem(SESSION_KEY, sessionId)
+    }
+    return sessionId
+}
 
 createApp({
     setup() {
@@ -263,6 +305,7 @@ createApp({
         const isTyping = ref(false)
         const messagesContainer = ref(null)
         const isUserScrolling = ref(false)
+        const sessionId = ref('')
         const suggestions = ref([
             "帮我分析一下最近的热门商品趋势",
             "推荐几个高潜力的商品类目",
@@ -270,6 +313,14 @@ createApp({
             "美妆类目的销量预测如何？",
             "哪些商品适合在双十一推广？"
         ])
+        const sessions = ref([])
+        
+        const shortSessionId = computed(() => {
+            if (!sessionId.value) return '-'
+            return sessionId.value.slice(0, 8)
+        })
+
+        const showSuggestions = computed(() => messages.value.length === 0)
         
         const getToken = () => localStorage.getItem('token')
         
@@ -308,6 +359,96 @@ createApp({
                 return content.replace(/\n/g, '<br>')
             }
         }
+
+        const normalizeTime = (value) => {
+            if (!value) return ''
+            const date = new Date(value)
+            if (isNaN(date.getTime())) {
+                return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            }
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        }
+
+        const formatSessionTime = (value) => {
+            if (!value) return ''
+            const date = new Date(value)
+            if (isNaN(date.getTime())) return ''
+            return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        }
+
+        const formatSessionTitle = (session) => {
+            if (!session) return '未命名会话'
+            if (session.title && session.title.trim()) return session.title
+            if (session.session_id) return `会话 ${session.session_id.slice(0, 6)}`
+            return '未命名会话'
+        }
+
+        const loadSessions = async () => {
+            try {
+                const token = getToken()
+                const response = await fetch(`${API_BASE}/ai/sessions?limit=50`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                if (!response.ok) {
+                    return
+                }
+                const result = await response.json()
+                if (result && result.success && Array.isArray(result.data)) {
+                    sessions.value = result.data
+                }
+            } catch (e) {
+                console.error('Load sessions error:', e)
+            }
+        }
+
+        const loadSessionHistory = async () => {
+            if (!sessionId.value) return
+            try {
+                const token = getToken()
+                const response = await fetch(`${API_BASE}/ai/session/messages?session_id=${encodeURIComponent(sessionId.value)}&limit=50`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                if (!response.ok) {
+                    return
+                }
+                const result = await response.json()
+                if (result && result.success && Array.isArray(result.data)) {
+                    messages.value = result.data.map(item => ({
+                        role: item.role,
+                        content: item.content,
+                        time: normalizeTime(item.created_at)
+                    }))
+                    scrollToBottom()
+                }
+            } catch (e) {
+                console.error('Load history error:', e)
+            }
+        }
+
+        const selectSession = async (session) => {
+            if (!session || !session.session_id) return
+            sessionId.value = session.session_id
+            localStorage.setItem(SESSION_KEY, session.session_id)
+            messages.value = []
+            await loadSessionHistory()
+        }
+
+        const createNewSession = () => {
+            const newSessionId = createSessionId()
+            localStorage.setItem(SESSION_KEY, newSessionId)
+            sessionId.value = newSessionId
+            messages.value = []
+            inputMessage.value = ''
+            isTyping.value = false
+            isUserScrolling.value = false
+            Toast.success('已新建会话')
+        }
         
         const sendMessage = async () => {
             const message = inputMessage.value.trim()
@@ -332,8 +473,11 @@ createApp({
                 content: '',
                 time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
             })
-            
+            let sendSucceeded = false
             try {
+                if (!sessionId.value) {
+                    sessionId.value = loadSessionId()
+                }
                 const token = getToken()
                 const response = await fetch(`${API_BASE}/ai/chat/stream`, {
                     method: 'POST',
@@ -343,6 +487,7 @@ createApp({
                     },
                     body: JSON.stringify({
                         message: message,
+                        session_id: sessionId.value,
                         history: messages.value.slice(0, -1).slice(-10).map(m => ({
                             role: m.role,
                             content: m.content
@@ -401,6 +546,7 @@ createApp({
                         }
                     }
                 }
+                sendSucceeded = true
                 
             } catch (e) {
                 console.error('AI chat error:', e)
@@ -408,6 +554,9 @@ createApp({
                 messages.value.splice(aiMessageIndex, 1)
             } finally {
                 isTyping.value = false
+                if (sendSucceeded) {
+                    loadSessions()
+                }
             }
         }
         
@@ -423,6 +572,10 @@ createApp({
                 return
             }
             
+            sessionId.value = loadSessionId()
+            loadSessionHistory()
+            loadSessions()
+            
             // 监听滚动事件
             if (messagesContainer.value) {
                 messagesContainer.value.addEventListener('scroll', handleScroll)
@@ -436,10 +589,19 @@ createApp({
             inputMessage,
             isTyping,
             messagesContainer,
+            sessionId,
+            shortSessionId,
             suggestions,
+            sessions,
+            showSuggestions,
             sendMessage,
             sendSuggestion,
-            renderMarkdown
+            renderMarkdown,
+            createNewSession,
+            selectSession,
+            loadSessions,
+            formatSessionTime,
+            formatSessionTitle
         }
     }
 }).mount('#app')

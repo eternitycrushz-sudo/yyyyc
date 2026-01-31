@@ -142,10 +142,5 @@ if __name__ == '__main__':
     print(f"地址: http://localhost:5000")
     print(f"默认账号: admin / admin123")
     print("=" * 50 + "\n")
-<<<<<<< HEAD
     
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True , allow_unsafe_werkzeug=True)
-=======
-    app.config['SECRET_KEY'] = 'dy-analysis-secret-key-2024'
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True,allow_unsafe_werkzeug=True)
->>>>>>> 48973a1f39dd9fe98321e41e70c351998faecb4d
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
