@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AI 智能助手 - 抖音电商分析系统</title>
+    <link href="css/fonts.css" rel="stylesheet"/>
+    <script src="lib/vue.global.js"></script>
+    <script src="lib/tailwind.min.js"></script>
+    <script src="js/toast.js"></script>
+    <!-- Markdown 渲染库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script>
+        // 配置 marked
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            })
+        }
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        
+        .message-user { background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%); }
+        .message-ai { background: #1a3035; border: 1px solid #325e67; }
+        
+        /* Markdown 样式 */
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            font-weight: bold;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+        }
+        .markdown-content h1 { font-size: 1.5em; }
+        .markdown-content h2 { font-size: 1.3em; }
+        .markdown-content h3 { font-size: 1.1em; }
+        .markdown-content p { margin-bottom: 0.5em; }
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        .markdown-content li { margin-bottom: 0.25em; }
+        .markdown-content code {
+            background: rgba(0,0,0,0.3);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .markdown-content pre {
+            background: rgba(0,0,0,0.3);
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+        }
+        .markdown-content blockquote {
+            border-left: 3px solid #13c8ec;
+            padding-left: 1em;
+            margin: 0.5em 0;
+            opacity: 0.8;
+        }
+        .markdown-content a {
+            color: #13c8ec;
+            text-decoration: underline;
+        }
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0.5em 0;
+        }
+        .markdown-content th, .markdown-content td {
+            border: 1px solid #325e67;
+            padding: 0.5em;
+            text-align: left;
+        }
+        .markdown-content th {
+            background: rgba(19, 200, 236, 0.1);
+            font-weight: bold;
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .typing-indicator span {
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body class="bg-background-dark text-white">
+
+<div id="app" class="flex h-screen">
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-surface-dark border-r border-input-border flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <a href="index.html" class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">arrow_back</span>
+                <span class="font-bold">返回首页</span>
+            </a>
+        </div>
+        
+        <div class="flex-1 p-4">
+            <h3 class="text-sm text-text-secondary mb-3">快捷问题</h3>
+            <div class="space-y-2">
+                <button v-for="(suggestion, idx) in suggestions" :key="idx"
+                        @click="sendSuggestion(suggestion)"
+                        class="w-full text-left p-3 rounded-lg bg-input-bg hover:bg-primary/10 text-sm transition-colors">
+                    {{ suggestion }}
+                </button>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 主聊天区 -->
+    <main class="flex-1 flex flex-col">
+        <!-- 顶部栏 -->
+        <header class="h-16 bg-surface-dark border-b border-input-border flex items-center justify-between px-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">smart_toy</span>
+                </div>
+                <div>
+                    <h1 class="font-bold">AI 智能助手</h1>
+                    <p class="text-xs text-text-secondary">电商数据分析专家</p>
+                </div>
+            </div>
+        </header>
+        
+        <!-- 消息列表 -->
+        <div ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+            <!-- 欢迎消息 -->
+            <div v-if="messages.length === 0" class="text-center py-12">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-4xl">psychology</span>
+                </div>
+                <h2 class="text-xl font-bold mb-2">你好！我是 AI 智能助手</h2>
+                <p class="text-text-secondary">我可以帮你分析电商数据、推荐商品、解答问题</p>
+            </div>
+            
+            <!-- 消息气泡 -->
+            <div v-for="(msg, idx) in messages" :key="idx" 
+                 :class="['flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                <!-- AI 头像 -->
+                <div v-if="msg.role === 'assistant'" class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                </div>
+                
+                <!-- 消息内容 -->
+                <div :class="['max-w-[70%] rounded-2xl px-4 py-3', 
+                              msg.role === 'user' ? 'message-user text-background-dark' : 'message-ai']">
+                    <!-- 用户消息：纯文本 -->
+                    <div v-if="msg.role === 'user'" class="whitespace-pre-wrap">{{ msg.content }}</div>
+                    <!-- AI 消息：Markdown 渲染 -->
+                    <div v-else class="markdown-content" v-html="renderMarkdown(msg.content)"></div>
+                    <div class="text-xs opacity-70 mt-1">{{ msg.time }}</div>
+                </div>
+                
+                <!-- 用户头像 -->
+                <div v-if="msg.role === 'user'" class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-xl">person</span>
+                </div>
+            </div>
+            
+            <!-- AI 正在输入 -->
+            <div v-if="isTyping" class="flex gap-3 justify-start">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                </div>
+                <div class="message-ai rounded-2xl px-4 py-3">
+                    <div class="typing-indicator flex gap-1">
+                        <span class="w-2 h-2 bg-primary rounded-full"></span>
+                        <span class="w-2 h-2 bg-primary rounded-full"></span>
+                        <span class="w-2 h-2 bg-primary rounded-full"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 输入框 -->
+        <div class="border-t border-input-border p-4 bg-surface-dark">
+            <form @submit.prevent="sendMessage" class="flex gap-3">
+                <input v-model="inputMessage"
+                       :disabled="isTyping"
+                       class="flex-1 h-12 px-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-text-secondary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+                       placeholder="输入你的问题..."
+                       type="text"/>
+                <button :disabled="isTyping || !inputMessage.trim()"
+                        class="px-6 h-12 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                        type="submit">
+                    <span class="material-symbols-outlined">send</span>
+                    发送
+                </button>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted, nextTick } = Vue
+
+const API_BASE = 'http://localhost:5000/api'
+
+createApp({
+    setup() {
+        const messages = ref([])
+        const inputMessage = ref('')
+        const isTyping = ref(false)
+        const messagesContainer = ref(null)
+        const isUserScrolling = ref(false)
+        const suggestions = ref([
+            "帮我分析一下最近的热门商品趋势",
+            "推荐几个高潜力的商品类目",
+            "如何提高商品的转化率？",
+            "美妆类目的销量预测如何？",
+            "哪些商品适合在双十一推广？"
+        ])
+        
+        const getToken = () => localStorage.getItem('token')
+        
+        // 检查是否在底部
+        const isAtBottom = () => {
+            if (!messagesContainer.value) return true
+            const container = messagesContainer.value
+            const threshold = 100 // 距离底部100px内认为是在底部
+            return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+        }
+        
+        // 智能滚动：只在用户在底部时才自动滚动
+        const scrollToBottom = () => {
+            nextTick(() => {
+                if (messagesContainer.value && !isUserScrolling.value) {
+                    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+                }
+            })
+        }
+        
+        // 监听用户滚动
+        const handleScroll = () => {
+            if (!messagesContainer.value) return
+            isUserScrolling.value = !isAtBottom()
+        }
+        
+        // Markdown 渲染
+        const renderMarkdown = (content) => {
+            if (typeof marked === 'undefined') {
+                return content.replace(/\n/g, '<br>')
+            }
+            try {
+                return marked.parse(content)
+            } catch (e) {
+                return content.replace(/\n/g, '<br>')
+            }
+        }
+        
+        const sendMessage = async () => {
+            const message = inputMessage.value.trim()
+            if (!message || isTyping.value) return
+            
+            // 添加用户消息
+            messages.value.push({
+                role: 'user',
+                content: message,
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            })
+            
+            inputMessage.value = ''
+            scrollToBottom()
+            isTyping.value = true
+            
+            // 用户发送消息时，重置滚动状态，确保能看到 AI 回复
+            isUserScrolling.value = false
+            
+            // 创建 AI 消息占位符
+            const aiMessageIndex = messages.value.length
+            messages.value.push({
+                role: 'assistant',
+                content: '',
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            })
+            
+            try {
+                const token = getToken()
+                const response = await fetch(`${API_BASE}/ai/chat/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: messages.value.slice(0, -1).slice(-10).map(m => ({
+                            role: m.role,
+                            content: m.content
+                        }))
+                    })
+                })
+                
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    try {
+                        const errorJson = JSON.parse(errorText)
+                        Toast.error(errorJson.message || '请求失败')
+                    } catch {
+                        Toast.error('请求失败: ' + response.status)
+                    }
+                    messages.value.splice(aiMessageIndex, 1)
+                    isTyping.value = false
+                    return
+                }
+                
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+                
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    
+                    const chunk = decoder.decode(value)
+                    const lines = chunk.split('\n')
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6)
+                            
+                            if (data === '[DONE]') {
+                                isTyping.value = false
+                                break
+                            }
+                            
+                            try {
+                                const json = JSON.parse(data)
+                                if (json.content) {
+                                    messages.value[aiMessageIndex].content += json.content
+                                    // 只在用户在底部时才自动滚动
+                                    if (!isUserScrolling.value) {
+                                        scrollToBottom()
+                                    }
+                                } else if (json.error) {
+                                    Toast.error('AI 错误: ' + json.error)
+                                    messages.value.splice(aiMessageIndex, 1)
+                                    isTyping.value = false
+                                    return
+                                }
+                            } catch (e) {
+                                // 忽略解析错误
+                            }
+                        }
+                    }
+                }
+                
+            } catch (e) {
+                console.error('AI chat error:', e)
+                Toast.error('网络错误，请稍后重试')
+                messages.value.splice(aiMessageIndex, 1)
+            } finally {
+                isTyping.value = false
+            }
+        }
+        
+        const sendSuggestion = (suggestion) => {
+            inputMessage.value = suggestion
+            sendMessage()
+        }
+        
+        onMounted(() => {
+            const token = getToken()
+            if (!token) {
+                window.location.href = 'login.html'
+            }
+            
+            // 监听滚动事件
+            if (messagesContainer.value) {
+                messagesContainer.value.addEventListener('scroll', handleScroll)
+            }
+        })
+        
+        return {
+            messages,
+            inputMessage,
+            isTyping,
+            messagesContainer,
+            suggestions,
+            sendMessage,
+            sendSuggestion,
+            renderMarkdown
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

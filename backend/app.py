@@ -42,6 +42,7 @@ register_routes(app)
 # ============================================
 
 @app.route('/')
+@app.route('/home')
 def index():
     """首页 - 营销页面"""
     return app.send_static_file('home.html')
@@ -142,4 +143,4 @@ if __name__ == '__main__':
     print(f"默认账号: admin / admin123")
     print("=" * 50 + "\n")
     
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True , allow_unsafe_werkzeug=True)

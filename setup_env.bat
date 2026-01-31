@@ -35,16 +35,17 @@ if errorlevel 1 (
 :: 3. 升级pip
 echo %yellow%升级pip...%reset%
 python -m pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+:: 4. 安装项目依赖
+echo %yellow%安装项目依赖...%reset%
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 if errorlevel 1 (
-    echo %red%❌ pip升级失败！%reset%
+    echo %red%❌ 安装依赖失败！%reset%
     pause
     exit /b 1
 )
 
-pip install -r requirements.txt
-
-pip install -r ./backend/requirements
-:: 6. 成功提示
+:: 5. 成功提示
 echo.
 echo %green%✅ 环境配置完成！%reset%
 echo 📌 激活环境命令：.env\Scripts\activate.bat

@@ -29,6 +29,9 @@ class Config:
     # API Token
     API_TOKEN = os.getenv('API_TOKEN', '45114cedfddd64db6b0c5f0acf929487')
     
+    # 智谱 AI 配置
+    ZHIPU_API_KEY = os.getenv('ZHIPU_API_KEY', '3abf3efec6b745e6a2762da34c7f5a03.1xgrVFKLsa8Df398')
+    
     @classmethod
     def get_db_config(cls):
         return {
