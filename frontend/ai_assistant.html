@@ -5,21 +5,14 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>AI 智能助手 - 抖音电商分析系统</title>
     <link href="css/fonts.css" rel="stylesheet"/>
-    <script src="lib/vue.global.js"></script>
-    <script src="lib/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/toast.js"></script>
     <!-- Markdown 渲染库 -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script>
-        // 配置 marked
-        if (typeof marked !== 'undefined') {
-            marked.setOptions({
-                breaks: true,
-                gfm: true
-            })
-        }
-    </script>
-    <script>
+        // 配置 Tailwind
         tailwind.config = {
             darkMode: "class",
             theme: {
@@ -32,41 +25,75 @@
                         "input-bg": "#192f33",
                         "input-border": "#325e67",
                         "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
                     }
                 }
             }
         }
+        
+        // 配置 marked
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            })
+        }
     </script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Inter, "Noto Sans SC", sans-serif;
+        }
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #111f22; }
         ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
         
-        .message-user { background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%); }
-        .message-ai { background: #1a3035; border: 1px solid #325e67; }
+        .message-user { 
+            background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%); 
+        }
+        .message-ai { 
+            background: #1a3035; 
+            border: 1px solid #325e67; 
+        }
         
         /* Markdown 样式 */
         .markdown-content h1, .markdown-content h2, .markdown-content h3 {
             font-weight: bold;
             margin-top: 1em;
             margin-bottom: 0.5em;
+            color: #fff;
         }
         .markdown-content h1 { font-size: 1.5em; }
         .markdown-content h2 { font-size: 1.3em; }
         .markdown-content h3 { font-size: 1.1em; }
-        .markdown-content p { margin-bottom: 0.5em; }
+        .markdown-content p { 
+            margin-bottom: 0.5em; 
+            line-height: 1.6;
+        }
         .markdown-content ul, .markdown-content ol {
             margin-left: 1.5em;
             margin-bottom: 0.5em;
         }
-        .markdown-content li { margin-bottom: 0.25em; }
+        .markdown-content li { 
+            margin-bottom: 0.25em;
+            line-height: 1.5;
+        }
         .markdown-content code {
             background: rgba(0,0,0,0.3);
             padding: 0.2em 0.4em;
             border-radius: 3px;
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
+            color: #13c8ec;
         }
         .markdown-content pre {
             background: rgba(0,0,0,0.3);
@@ -78,6 +105,7 @@
         .markdown-content pre code {
             background: none;
             padding: 0;
+            color: #fff;
         }
         .markdown-content blockquote {
             border-left: 3px solid #13c8ec;
@@ -117,22 +145,22 @@
 </head>
 <body class="bg-background-dark text-white">
 
-<div id="app" class="flex h-screen">
+<div id="app" class="flex h-screen overflow-hidden">
     <!-- 侧边栏 -->
-    <aside class="w-64 bg-surface-dark border-r border-input-border flex flex-col">
+    <aside class="w-64 bg-surface-dark border-r border-input-border flex flex-col flex-shrink-0">
         <div class="h-16 flex items-center px-6 border-b border-input-border">
-            <a href="index.html" class="flex items-center gap-3">
+            <a href="index.html" class="flex items-center gap-3 hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-primary">arrow_back</span>
                 <span class="font-bold">返回首页</span>
             </a>
         </div>
         
-        <div class="flex-1 p-4">
-            <h3 class="text-sm text-text-secondary mb-3">快捷问题</h3>
+        <div class="flex-1 p-4 overflow-y-auto">
+            <h3 class="text-sm text-text-secondary mb-3 font-semibold">快捷问题</h3>
             <div class="space-y-2">
                 <button v-for="(suggestion, idx) in suggestions" :key="idx"
                         @click="sendSuggestion(suggestion)"
-                        class="w-full text-left p-3 rounded-lg bg-input-bg hover:bg-primary/10 text-sm transition-colors">
+                        class="w-full text-left p-3 rounded-lg bg-input-bg hover:bg-primary/10 text-sm transition-colors border border-transparent hover:border-primary/30">
                     {{ suggestion }}
                 </button>
             </div>
@@ -140,15 +168,15 @@
     </aside>
     
     <!-- 主聊天区 -->
-    <main class="flex-1 flex flex-col">
+    <main class="flex-1 flex flex-col min-w-0">
         <!-- 顶部栏 -->
-        <header class="h-16 bg-surface-dark border-b border-input-border flex items-center justify-between px-6">
+        <header class="h-16 bg-surface-dark border-b border-input-border flex items-center justify-between px-6 flex-shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                     <span class="material-symbols-outlined text-primary">smart_toy</span>
                 </div>
                 <div>
-                    <h1 class="font-bold">AI 智能助手</h1>
+                    <h1 class="font-bold text-lg">AI 智能助手</h1>
                     <p class="text-xs text-text-secondary">电商数据分析专家</p>
                 </div>
             </div>
@@ -205,11 +233,11 @@
         </div>
         
         <!-- 输入框 -->
-        <div class="border-t border-input-border p-4 bg-surface-dark">
+        <div class="border-t border-input-border p-4 bg-surface-dark flex-shrink-0">
             <form @submit.prevent="sendMessage" class="flex gap-3">
                 <input v-model="inputMessage"
                        :disabled="isTyping"
-                       class="flex-1 h-12 px-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-text-secondary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+                       class="flex-1 h-12 px-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-text-secondary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50 transition-all"
                        placeholder="输入你的问题..."
                        type="text"/>
                 <button :disabled="isTyping || !inputMessage.trim()"
@@ -224,7 +252,7 @@
 </div>
 
 <script>
-const { createApp, ref, reactive, onMounted, nextTick } = Vue
+const { createApp, ref, onMounted, nextTick } = Vue
 
 const API_BASE = 'http://localhost:5000/api'
 
@@ -249,11 +277,11 @@ createApp({
         const isAtBottom = () => {
             if (!messagesContainer.value) return true
             const container = messagesContainer.value
-            const threshold = 100 // 距离底部100px内认为是在底部
+            const threshold = 100
             return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
         }
         
-        // 智能滚动：只在用户在底部时才自动滚动
+        // 智能滚动
         const scrollToBottom = () => {
             nextTick(() => {
                 if (messagesContainer.value && !isUserScrolling.value) {
@@ -276,6 +304,7 @@ createApp({
             try {
                 return marked.parse(content)
             } catch (e) {
+                console.error('Markdown parse error:', e)
                 return content.replace(/\n/g, '<br>')
             }
         }
@@ -294,8 +323,6 @@ createApp({
             inputMessage.value = ''
             scrollToBottom()
             isTyping.value = true
-            
-            // 用户发送消息时，重置滚动状态，确保能看到 AI 回复
             isUserScrolling.value = false
             
             // 创建 AI 消息占位符
@@ -359,7 +386,6 @@ createApp({
                                 const json = JSON.parse(data)
                                 if (json.content) {
                                     messages.value[aiMessageIndex].content += json.content
-                                    // 只在用户在底部时才自动滚动
                                     if (!isUserScrolling.value) {
                                         scrollToBottom()
                                     }
@@ -394,12 +420,15 @@ createApp({
             const token = getToken()
             if (!token) {
                 window.location.href = 'login.html'
+                return
             }
             
             // 监听滚动事件
             if (messagesContainer.value) {
                 messagesContainer.value.addEventListener('scroll', handleScroll)
             }
+            
+            console.log('AI Assistant mounted successfully')
         })
         
         return {
