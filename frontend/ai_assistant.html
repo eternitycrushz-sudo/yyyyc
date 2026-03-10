@@ -264,11 +264,12 @@ createApp({
         const messagesContainer = ref(null)
         const isUserScrolling = ref(false)
         const suggestions = ref([
-            "帮我分析一下最近的热门商品趋势",
-            "推荐几个高潜力的商品类目",
-            "如何提高商品的转化率？",
-            "美妆类目的销量预测如何？",
-            "哪些商品适合在双十一推广？"
+            "推荐几个当前热门的商品",
+            "哪些商品佣金最高？",
+            "美妆类目有哪些商品？",
+            "价格在50-100元的商品有哪些？",
+            "帮我分析一下商品销量趋势",
+            "如何提高商品转化率？"
         ])
         
         const getToken = () => localStorage.getItem('token')
@@ -325,7 +326,7 @@ createApp({
             isTyping.value = true
             isUserScrolling.value = false
             
-            // 创建 AI 消息占位符
+            // 添加空的AI消息用于流式更新
             const aiMessageIndex = messages.value.length
             messages.value.push({
                 role: 'assistant',
@@ -343,69 +344,54 @@ createApp({
                     },
                     body: JSON.stringify({
                         message: message,
-                        history: messages.value.slice(0, -1).slice(-10).map(m => ({
-                            role: m.role,
-                            content: m.content
-                        }))
+                        session_id: 'fullscreen_session_' + Date.now()
                     })
                 })
                 
                 if (!response.ok) {
-                    const errorText = await response.text()
-                    try {
-                        const errorJson = JSON.parse(errorText)
-                        Toast.error(errorJson.message || '请求失败')
-                    } catch {
-                        Toast.error('请求失败: ' + response.status)
-                    }
-                    messages.value.splice(aiMessageIndex, 1)
-                    isTyping.value = false
-                    return
+                    throw new Error(`HTTP ${response.status}`)
                 }
                 
                 const reader = response.body.getReader()
                 const decoder = new TextDecoder()
+                let buffer = ''
                 
                 while (true) {
                     const { done, value } = await reader.read()
                     if (done) break
                     
-                    const chunk = decoder.decode(value)
-                    const lines = chunk.split('\n')
+                    buffer += decoder.decode(value, { stream: true })
+                    const lines = buffer.split('\n')
+                    buffer = lines.pop() // 保留不完整的行
                     
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
-                            const data = line.slice(6)
-                            
+                            const data = line.slice(6).trim()
                             if (data === '[DONE]') {
-                                isTyping.value = false
                                 break
                             }
                             
                             try {
-                                const json = JSON.parse(data)
-                                if (json.content) {
-                                    messages.value[aiMessageIndex].content += json.content
-                                    if (!isUserScrolling.value) {
-                                        scrollToBottom()
-                                    }
-                                } else if (json.error) {
-                                    Toast.error('AI 错误: ' + json.error)
-                                    messages.value.splice(aiMessageIndex, 1)
-                                    isTyping.value = false
-                                    return
+                                const parsed = JSON.parse(data)
+                                if (parsed.content) {
+                                    messages.value[aiMessageIndex].content += parsed.content
+                                    scrollToBottom()
+                                } else if (parsed.error) {
+                                    throw new Error(parsed.error)
                                 }
                             } catch (e) {
-                                // 忽略解析错误
+                                console.error('Parse error:', e)
                             }
                         }
                     }
                 }
                 
+                scrollToBottom()
+                
             } catch (e) {
                 console.error('AI chat error:', e)
-                Toast.error('网络错误，请稍后重试')
-                messages.value.splice(aiMessageIndex, 1)
+                messages.value[aiMessageIndex].content = '抱歉，我遇到了一些问题。请稍后重试。'
+                Toast.error('AI 回复失败: ' + e.message)
             } finally {
                 isTyping.value = false
             }

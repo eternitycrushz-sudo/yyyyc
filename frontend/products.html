@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>商品数据分析 - 抖音电商数据分析系统</title>
+    <link href="css/fonts.css?v=5" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
+        .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
+        [v-cloak] { display: none !important; }
+        
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .text-white { color: #111827 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white">
+
+<div id="app" class="flex h-screen" v-cloak>
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-white dark:bg-surface-dark border-r border-gray-200 dark:border-input-border flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">analytics</span>
+                </div>
+                <span class="font-bold text-lg">数据分析系统</span>
+            </div>
+        </div>
+        
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
+            <a v-for="item in menuItems" :key="item.path"
+               :href="item.path"
+               :class="['sidebar-item flex items-center gap-3 px-6 py-3 text-sm transition-colors', 
+                        currentPath === item.path ? 'active text-primary' : 'text-gray-300 hover:text-white']">
+                <span class="material-symbols-outlined text-xl">{{ item.icon }}</span>
+                {{ item.name }}
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-input-border">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ user?.nickname || user?.username }}</div>
+                    <div class="text-xs text-text-secondary">{{ user?.roles?.[0]?.name || '用户' }}</div>
+                </div>
+                <button @click="handleLogout" class="p-2 hover:bg-input-bg rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-text-secondary hover:text-red-400">logout</span>
+                </button>
+            </div>
+            <button @click="toggleTheme" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-input-bg hover:bg-primary/10 rounded-lg transition-colors">
+                <span v-if="isDark" class="material-symbols-outlined text-yellow-400">light_mode</span>
+                <span v-else class="material-symbols-outlined text-primary">dark_mode</span>
+                <span class="text-sm">{{ isDark ? '亮色模式' : '暗色模式' }}</span>
+            </button>
+        </div>
+    </aside>
+    
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-input-border flex items-center justify-between px-6">
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">商品数据分析</h1>
+            <div class="flex items-center gap-4">
+                <button @click="loadData" class="px-3 py-1.5 bg-primary text-background-dark rounded-lg text-sm hover:bg-primary/90">
+                    <span class="material-symbols-outlined text-base">refresh</span>
+                </button>
+                <span class="text-sm text-gray-600 dark:text-text-secondary">{{ currentTime }}</span>
+            </div>
+        </header>
+        
+        <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-background-dark">
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div v-for="stat in stats" :key="stat.label" 
+                     class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-600 dark:text-text-secondary text-sm">{{ stat.label }}</span>
+                        <span :class="['material-symbols-outlined text-2xl', stat.color]">{{ stat.icon }}</span>
+                    </div>
+                    <div class="text-3xl font-bold mb-1 text-gray-900 dark:text-white">{{ stat.value }}</div>
+                    <div class="text-xs text-gray-600 dark:text-text-secondary">{{ stat.desc }}</div>
+                </div>
+            </div>
+            
+            <!-- 图表区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- 价格分布 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">价格分布</h3>
+                    <div id="priceChart" style="height: 300px;"></div>
+                </div>
+                
+                <!-- 佣金分布 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">佣金分布</h3>
+                    <div id="commissionChart" style="height: 300px;"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- 分类统计 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">分类统计</h3>
+                    <div id="categoryChart" style="height: 300px;"></div>
+                </div>
+                
+                <!-- 销量排行 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">销量TOP10</h3>
+                    <div id="salesChart" style="height: 300px;"></div>
+                </div>
+            </div>
+            
+            <!-- 趋势图 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">商品新增趋势</h3>
+                <div id="trendChart" style="height: 400px;"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+const { createApp, ref, onMounted, onUnmounted } = Vue
+
+const API_BASE = 'http://localhost:5000/api'
+
+createApp({
+    setup() {
+        const user = ref(null)
+        const currentTime = ref('')
+        const isDark = ref(true)
+        const currentPath = ref('products.html')
+        
+        const menuItems = [
+            { name: '首页', path: 'index.html', icon: 'home' },
+            { name: '商品数据', path: 'products.html', icon: 'inventory_2' },
+            { name: '达人分析', path: 'influencers.html', icon: 'person_search' },
+            { name: '直播分析', path: 'live.html', icon: 'live_tv' },
+            { name: '视频分析', path: 'videos.html', icon: 'play_circle' },
+            { name: 'AI 智能助手', path: 'ai_assistant.html', icon: 'smart_toy' },
+        ]
+        
+        const stats = ref([
+            { label: '商品总数', value: '0', icon: 'inventory_2', color: 'text-primary', desc: '已采集商品' },
+            { label: '今日新增', value: '0', icon: 'add_circle', color: 'text-green-400', desc: '较昨日增长' },
+            { label: '平均价格', value: '¥0', icon: 'payments', color: 'text-purple-400', desc: '商品均价' },
+            { label: '平均佣金', value: '¥0', icon: 'account_balance_wallet', color: 'text-yellow-400', desc: '佣金均值' },
+        ])
+        
+        let charts = {}
+        
+        const getToken = () => localStorage.getItem('token')
+        
+        const request = async (url, options = {}) => {
+            const token = getToken()
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...options.headers
+            }
+            
+            const response = await fetch(`${API_BASE}${url}`, {
+                ...options,
+                headers
+            })
+            
+            if (response.status === 401) {
+                localStorage.removeItem('token')
+                localStorage.removeItem('user')
+                window.location.href = 'login.html'
+                return
+            }
+            
+            return response.json()
+        }
+        
+        const checkAuth = () => {
+            const token = getToken()
+            const savedUser = localStorage.getItem('user')
+            
+            if (!token || !savedUser) {
+                window.location.href = 'login.html'
+                return
+            }
+            
+            user.value = JSON.parse(savedUser)
+        }
+        
+        const handleLogout = async () => {
+            await request('/auth/logout', { method: 'POST' })
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = 'login.html'
+        }
+        
+        const toggleTheme = () => {
+            isDark.value = !isDark.value
+            if (isDark.value) {
+                document.documentElement.classList.add('dark')
+                localStorage.setItem('theme', 'dark')
+            } else {
+                document.documentElement.classList.remove('dark')
+                localStorage.setItem('theme', 'light')
+            }
+            // 重新渲染图表以适应主题
+            setTimeout(() => {
+                Object.values(charts).forEach(chart => chart.resize())
+            }, 100)
+        }
+        
+        const updateTime = () => {
+            const now = new Date()
+            currentTime.value = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+        }
+        
+        const initCharts = () => {
+            const isDarkMode = isDark.value
+            const textColor = isDarkMode ? '#92c0c9' : '#6b7280'
+            const bgColor = isDarkMode ? '#1a3035' : '#ffffff'
+            
+            // 价格分布图
+            charts.price = echarts.init(document.getElementById('priceChart'))
+            charts.price.setOption({
+                backgroundColor: bgColor,
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: ['0-50', '50-100', '100-200', '200-500', '500+'],
+                    axisLabel: { color: textColor }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: textColor }
+                },
+                series: [{
+                    data: [0, 0, 0, 0, 0],
+                    type: 'bar',
+                    itemStyle: { color: '#13c8ec' }
+                }]
+            })
+            
+            // 佣金分布图
+            charts.commission = echarts.init(document.getElementById('commissionChart'))
+            charts.commission.setOption({
+                backgroundColor: bgColor,
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: ['0-10', '10-20', '20-50', '50-100', '100+'],
+                    axisLabel: { color: textColor }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: textColor }
+                },
+                series: [{
+                    data: [0, 0, 0, 0, 0],
+                    type: 'bar',
+                    itemStyle: { color: '#10b981' }
+                }]
+            })
+            
+            // 分类统计图
+            charts.category = echarts.init(document.getElementById('categoryChart'))
+            charts.category.setOption({
+                backgroundColor: bgColor,
+                tooltip: { trigger: 'item' },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left',
+                    textStyle: { color: textColor }
+                },
+                series: [{
+                    type: 'pie',
+                    radius: '50%',
+                    data: [],
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            })
+            
+            // 销量排行图
+            charts.sales = echarts.init(document.getElementById('salesChart'))
+            charts.sales.setOption({
+                backgroundColor: bgColor,
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'value',
+                    axisLabel: { color: textColor }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: [],
+                    axisLabel: { color: textColor }
+                },
+                series: [{
+                    data: [],
+                    type: 'bar',
+                    itemStyle: { color: '#f59e0b' }
+                }]
+            })
+            
+            // 趋势图
+            charts.trend = echarts.init(document.getElementById('trendChart'))
+            charts.trend.setOption({
+                backgroundColor: bgColor,
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: [],
+                    axisLabel: { color: textColor }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: textColor }
+                },
+                series: [{
+                    data: [],
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: { color: '#8b5cf6' },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(139, 92, 246, 0.3)' },
+                            { offset: 1, color: 'rgba(139, 92, 246, 0.05)' }
+                        ])
+                    }
+                }]
+            })
+        }
+        
+        const loadData = async () => {
+            try {
+                // 加载统计数据
+                const statsResult = await request('/goods/stats')
+                if (statsResult.code === 0) {
+                    const data = statsResult.data
+                    stats.value[0].value = data.total_goods.toLocaleString()
+                    stats.value[1].value = data.today_count.toLocaleString()
+                    stats.value[2].value = `¥${data.avg_price.toFixed(2)}`
+                    stats.value[3].value = `¥${data.avg_commission.toFixed(2)}`
+                }
+                
+                // 加载商品列表用于分析
+                const goodsResult = await request('/goods/list?page=1&page_size=1000')
+                if (goodsResult.code === 0) {
+                    const goodsList = goodsResult.data.list
+                    
+                    // 价格分布
+                    const priceRanges = [0, 0, 0, 0, 0]
+                    goodsList.forEach(g => {
+                        const price = g.price || 0
+                        if (price < 50) priceRanges[0]++
+                        else if (price < 100) priceRanges[1]++
+                        else if (price < 200) priceRanges[2]++
+                        else if (price < 500) priceRanges[3]++
+                        else priceRanges[4]++
+                    })
+                    charts.price.setOption({ series: [{ data: priceRanges }] })
+                    
+                    // 佣金分布
+                    const commissionRanges = [0, 0, 0, 0, 0]
+                    goodsList.forEach(g => {
+                        const commission = g.cos_fee || 0
+                        if (commission < 10) commissionRanges[0]++
+                        else if (commission < 20) commissionRanges[1]++
+                        else if (commission < 50) commissionRanges[2]++
+                        else if (commission < 100) commissionRanges[3]++
+                        else commissionRanges[4]++
+                    })
+                    charts.commission.setOption({ series: [{ data: commissionRanges }] })
+                    
+                    // 分类统计（使用first_cid）
+                    const categoryMap = {}
+                    const categoryNames = ['美妆', '服饰', '食品', '数码', '家居', '母婴', '运动', '图书']
+                    goodsList.forEach(g => {
+                        const cid = g.first_cid || '0'
+                        const idx = parseInt(cid) % categoryNames.length
+                        const name = categoryNames[idx]
+                        categoryMap[name] = (categoryMap[name] || 0) + 1
+                    })
+                    const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }))
+                    charts.category.setOption({ series: [{ data: categoryData }] })
+                    
+                    // 销量TOP10
+                    const topSales = goodsList
+                        .sort((a, b) => (b.sales || 0) - (a.sales || 0))
+                        .slice(0, 10)
+                    const salesNames = topSales.map(g => g.title.substring(0, 15) + '...')
+                    const salesValues = topSales.map(g => g.sales || 0)
+                    charts.sales.setOption({
+                        yAxis: { data: salesNames.reverse() },
+                        series: [{ data: salesValues.reverse() }]
+                    })
+                    
+                    // 趋势图（按日期统计）
+                    const trendMap = {}
+                    goodsList.forEach(g => {
+                        if (g.created_at) {
+                            const date = g.created_at.split(' ')[0]
+                            trendMap[date] = (trendMap[date] || 0) + 1
+                        }
+                    })
+                    const trendDates = Object.keys(trendMap).sort().slice(-30)
+                    const trendValues = trendDates.map(date => trendMap[date])
+                    charts.trend.setOption({
+                        xAxis: { data: trendDates },
+                        series: [{ data: trendValues }]
+                    })
+                }
+            } catch (e) {
+                console.error('加载数据失败:', e)
+                Toast.error('加载数据失败: ' + e.message)
+            }
+        }
+        
+        let timeInterval
+        onMounted(() => {
+            checkAuth()
+            updateTime()
+            timeInterval = setInterval(updateTime, 1000)
+            
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'light') {
+                isDark.value = false
+                document.documentElement.classList.remove('dark')
+            } else {
+                isDark.value = true
+                document.documentElement.classList.add('dark')
+            }
+            
+            setTimeout(() => {
+                initCharts()
+                loadData()
+            }, 100)
+        })
+        
+        onUnmounted(() => {
+            clearInterval(timeInterval)
+            Object.values(charts).forEach(chart => chart.dispose())
+        })
+        
+        return {
+            user,
+            currentTime,
+            isDark,
+            currentPath,
+            menuItems,
+            stats,
+            handleLogout,
+            toggleTheme,
+            loadData
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

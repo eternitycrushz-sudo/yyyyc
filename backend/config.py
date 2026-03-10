@@ -14,14 +14,14 @@ class Config:
     JWT_EXPIRE_HOURS = int(os.getenv('JWT_EXPIRE_HOURS', 24))
     
     # 数据库配置
-    DB_HOST = os.getenv('DB_HOST', '172.25.250.20')
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = int(os.getenv('DB_PORT', 3306))
     DB_USER = os.getenv('DB_USER', 'root')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '123456')
     DB_NAME = os.getenv('DB_NAME', 'dy_analysis_system')
     
     # RabbitMQ 配置
-    MQ_HOST = os.getenv('MQ_HOST', '172.25.250.20')
+    MQ_HOST = os.getenv('MQ_HOST', 'localhost')
     MQ_PORT = int(os.getenv('MQ_PORT', 5672))
     MQ_USER = os.getenv('MQ_USER', 'guest')
     MQ_PASSWORD = os.getenv('MQ_PASSWORD', 'guest')

@@ -56,6 +56,144 @@ def parse_chinese_number(value):
         return 0
 
 
+@goods_bp.route('/search', methods=['GET'])
+@login_required
+def search_goods():
+    """
+    搜索商品
+    
+    参数：
+        q: 搜索关键词（商品ID或商品名称）
+        page: 页码，默认1
+        page_size: 每页数量，默认20
+    """
+    try:
+        # 获取参数
+        query = request.args.get('q', '').strip()
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 20))
+        
+        if not query:
+            return jsonify({
+                'code': -1,
+                'msg': '搜索关键词不能为空'
+            }), 400
+        
+        # 验证参数
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 20
+        
+        # 计算偏移量
+        offset = (page - 1) * page_size
+        
+        # 查询数据
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 构建搜索条件
+        # 支持商品ID精确匹配或商品名称模糊匹配
+        where_clause = """
+            WHERE product_id = %s 
+            OR goods_id = %s 
+            OR title LIKE %s
+        """
+        search_params = [query, query, f'%{query}%']
+        
+        # 查询总数
+        count_query = f"SELECT COUNT(*) as total FROM goods_list {where_clause}"
+        cursor.execute(count_query, search_params)
+        total = cursor.fetchone()['total']
+        
+        # 查询数据
+        query_sql = f"""
+        SELECT 
+            id, goods_id, product_id, platform, status,
+            title, cover, url,
+            price, coupon, coupon_price,
+            cos_ratio, kol_cos_ratio, cos_fee, kol_cos_fee,
+            shop_id, shop_name, shop_logo,
+            view_num, order_num, combined, sales_24, kol_num, sales, sales_7day,
+            activity_id, labels, tags,
+            created_at, updated_at
+        FROM goods_list
+        {where_clause}
+        ORDER BY created_at DESC
+        LIMIT %s OFFSET %s
+        """
+        
+        search_params.extend([page_size, offset])
+        cursor.execute(query_sql, search_params)
+        goods_list = cursor.fetchall()
+        
+        # 转换数值字段
+        for goods in goods_list:
+            try:
+                # 转换价格相关字段
+                if 'price' in goods:
+                    goods['price'] = float(goods['price']) if goods['price'] else 0
+                if 'coupon' in goods:
+                    goods['coupon'] = float(goods['coupon']) if goods['coupon'] else 0
+                if 'coupon_price' in goods:
+                    goods['coupon_price'] = float(goods['coupon_price']) if goods['coupon_price'] else 0
+                
+                # 转换佣金相关字段
+                if 'cos_ratio' in goods:
+                    goods['cos_ratio'] = float(goods['cos_ratio']) if goods['cos_ratio'] else 0
+                if 'kol_cos_ratio' in goods:
+                    goods['kol_cos_ratio'] = float(goods['kol_cos_ratio']) if goods['kol_cos_ratio'] else 0
+                if 'cos_fee' in goods:
+                    goods['cos_fee'] = float(goods['cos_fee']) if goods['cos_fee'] else 0
+                if 'kol_cos_fee' in goods:
+                    goods['kol_cos_fee'] = float(goods['kol_cos_fee']) if goods['kol_cos_fee'] else 0
+                
+                # 转换统计相关字段
+                if 'view_num' in goods:
+                    goods['view_num'] = parse_chinese_number(goods['view_num'])
+                if 'order_num' in goods:
+                    goods['order_num'] = parse_chinese_number(goods['order_num'])
+                if 'combined' in goods:
+                    goods['combined'] = parse_chinese_number(goods['combined'])
+                if 'sales_24' in goods:
+                    goods['sales_24'] = parse_chinese_number(goods['sales_24'])
+                if 'kol_num' in goods:
+                    goods['kol_num'] = parse_chinese_number(goods['kol_num'])
+                if 'sales' in goods:
+                    goods['sales'] = parse_chinese_number(goods['sales'])
+                if 'sales_7day' in goods:
+                    goods['sales_7day'] = parse_chinese_number(goods['sales_7day'])
+            except Exception as e:
+                logger.error(f"转换商品数据失败 (product_id={goods.get('product_id')}): {e}")
+                continue
+        
+        cursor.close()
+        conn.close()
+        
+        # 计算总页数
+        total_pages = (total + page_size - 1) // page_size
+        
+        return jsonify({
+            'code': 0,
+            'msg': 'success',
+            'data': {
+                'list': goods_list,
+                'total': total,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': total_pages,
+                'query': query
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"搜索商品失败: {e}", exc_info=True)
+        return jsonify({
+            'code': -1,
+            'msg': f'搜索商品失败: {str(e)}'
+        }), 500
+
+
 @goods_bp.route('/list', methods=['GET'])
 @login_required
 def get_goods_list():
@@ -67,6 +205,7 @@ def get_goods_list():
         page_size: 每页数量，默认20
         sort_by: 排序字段，默认created_at
         order: 排序方向，asc/desc，默认desc
+        category: 分类筛选，可选
     """
     try:
         # 获取参数
@@ -74,6 +213,7 @@ def get_goods_list():
         page_size = int(request.args.get('page_size', 20))
         sort_by = request.args.get('sort_by', 'created_at')
         order = request.args.get('order', 'desc').upper()
+        category = request.args.get('category', '')  # 分类筛选
         
         # 验证参数
         if page < 1:
@@ -95,8 +235,17 @@ def get_goods_list():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # 构建WHERE子句
+        where_clause = ""
+        query_params = []
+        
+        if category:
+            where_clause = "WHERE labels LIKE %s"
+            query_params.append(f'%{category}%')
+        
         # 查询总数
-        cursor.execute("SELECT COUNT(*) as total FROM goods_list")
+        count_query = f"SELECT COUNT(*) as total FROM goods_list {where_clause}"
+        cursor.execute(count_query, query_params)
         total = cursor.fetchone()['total']
         
         # 查询数据
@@ -111,11 +260,13 @@ def get_goods_list():
             activity_id, labels, tags,
             created_at, updated_at
         FROM goods_list
+        {where_clause}
         ORDER BY {sort_by} {order}
         LIMIT %s OFFSET %s
         """
         
-        cursor.execute(query, (page_size, offset))
+        query_params.extend([page_size, offset])
+        cursor.execute(query, query_params)
         goods_list = cursor.fetchall()
         
         # 转换数值字段
