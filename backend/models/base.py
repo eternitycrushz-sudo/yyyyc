@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 数据库基础操作
 """
@@ -100,7 +100,34 @@ def init_tables():
             INDEX `idx_role_id` (`role_id`),
             INDEX `idx_permission_id` (`permission_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限关联表';
+        """,
+        
+        # AI 会话表
         """
+        CREATE TABLE IF NOT EXISTS `ai_chat_session` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT NOT NULL,
+            `session_id` VARCHAR(64) NOT NULL,
+            `title` VARCHAR(100) NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `uk_user_session` (`user_id`, `session_id`),
+            INDEX `idx_user_id` (`user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI会话表';
+        """,
+        
+        # AI 消息表
+        """
+        CREATE TABLE IF NOT EXISTS `ai_chat_message` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `session_id` INT NOT NULL,
+            `role` VARCHAR(20) NOT NULL,
+            `content` TEXT NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_session_id` (`session_id`),
+            INDEX `idx_created_at` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI会话消息表';
+        """,
     ]
     
     conn = get_db_connection()
@@ -207,3 +234,6 @@ def init_default_data():
         
     finally:
         conn.close()
+
+
+

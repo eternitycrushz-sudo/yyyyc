@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 AI 智能助手路由 - 支持数据库查询和聊天记录
 """
@@ -257,7 +257,7 @@ def chat_stream():
             'success': False,
             'message': 'AI 助手功能未启用，请安装 zhipuai: pip install zhipuai'
         }), 503
-    
+
     data = request.json or {}
     user_message = data.get('message', '').strip()
     session_id = data.get('session_id', '')
@@ -376,7 +376,12 @@ def chat():
             'success': False,
             'message': '消息不能为空'
         }), 400
-    
+
+    user_id = g.current_user['user_id']
+    session_pk, created = AiChatModel.ensure_session(user_id, session_id)
+    if created:
+        AiChatModel.update_session_title(session_pk, user_message[:50])
+
     try:
         # 创建或获取会话
         session_id = create_or_get_session(user_id, session_id)
@@ -433,8 +438,7 @@ def chat():
             temperature=0.7,
             max_tokens=2000
         )
-        
-        # 提取回复
+
         reply = response.choices[0].message.content
         print(f"[AI Chat] AI回复长度: {len(reply)}")
         
@@ -453,7 +457,7 @@ def chat():
                 }
             }
         })
-        
+
     except Exception as e:
         print(f"[AI Chat] 错误: {e}")
         import traceback
@@ -523,6 +527,59 @@ def get_sessions():
         }), 500
 
 
+@ai_bp.route('/session/messages', methods=['GET'])
+@login_required
+def get_session_messages():
+    """
+    获取会话历史消息
+    参数:
+        session_id: 会话ID
+        limit: 最大消息数
+    """
+    session_id = (request.args.get('session_id') or '').strip() or 'default'
+    limit = int(request.args.get('limit', 50))
+    if limit < 1:
+        limit = 50
+    if limit > 200:
+        limit = 200
+
+    user_id = g.current_user['user_id']
+    session = AiChatModel.get_session(user_id, session_id)
+    if not session:
+        return jsonify({
+            'success': True,
+            'data': []
+        })
+
+    messages = AiChatModel.get_recent_messages(session['id'], limit=limit)
+    return jsonify({
+        'success': True,
+        'data': messages
+    })
+
+
+@ai_bp.route('/sessions', methods=['GET'])
+@login_required
+def list_sessions():
+    """
+    获取会话列表
+    参数:
+        limit: 最大会话数
+    """
+    limit = int(request.args.get('limit', 50))
+    if limit < 1:
+        limit = 50
+    if limit > 200:
+        limit = 200
+
+    user_id = g.current_user['user_id']
+    sessions = AiChatModel.list_sessions(user_id, limit=limit)
+    return jsonify({
+        'success': True,
+        'data': sessions
+    })
+
+
 @ai_bp.route('/suggestions', methods=['GET'])
 @login_required
 def get_suggestions():
@@ -535,7 +592,7 @@ def get_suggestions():
         "帮我分析一下商品销量趋势",
         "如何提高商品转化率？"
     ]
-    
+
     return jsonify({
         'success': True,
         'data': suggestions

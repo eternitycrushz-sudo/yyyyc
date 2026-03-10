@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html class="dark" lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>抖音电商热点数据可视化分析系统 - 注册</title>
     <link href="css/fonts.css" rel="stylesheet"/>
-    <script src="lib/tailwind.min.js"></script>
-    <script src="lib/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="js/toast.js"></script>
     <script>
         tailwind.config = {
@@ -21,6 +21,10 @@
                         "input-bg": "#192f33",
                         "input-border": "#325e67",
                         "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "Noto Sans SC", "sans-serif"],
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
                     }
                 }
             }
@@ -29,6 +33,52 @@
     <style>
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* 背景动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        /* 渐变边框效果 */
+        .gradient-border {
+            position: relative;
+            background: linear-gradient(135deg, rgba(19, 200, 236, 0.1), rgba(19, 200, 236, 0.05));
+            border: 1px solid transparent;
+        }
+        
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, #13c8ec, #325e67);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        /* 输入框聚焦效果 */
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(19, 200, 236, 0.1), 0 0 20px rgba(19, 200, 236, 0.2);
+        }
+        
+        /* 按钮脉冲效果 */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(19, 200, 236, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(19, 200, 236, 0.6); }
+        }
+        
+        .btn-pulse:hover {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased min-h-screen flex flex-col">
@@ -40,18 +90,22 @@
         <div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/95 to-background-dark/80 pointer-events-none"></div>
         
         <div class="relative w-full max-w-md mx-auto px-4">
-            <div class="bg-surface-dark rounded-2xl p-8 border border-input-border shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <!-- 装饰性浮动元素 -->
+            <div class="absolute -top-20 -left-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl float-animation"></div>
+            <div class="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl float-animation" style="animation-delay: 3s;"></div>
+            
+            <div class="gradient-border bg-surface-dark rounded-2xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-sm">
                 <!-- Logo -->
                 <div class="flex items-center justify-center gap-3 mb-8">
-                    <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-primary text-2xl">analytics</span>
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/30">
+                        <span class="material-symbols-outlined text-white text-2xl">analytics</span>
                     </div>
-                    <span class="font-bold text-xl">数据分析系统</span>
+                    <span class="font-bold text-2xl bg-gradient-to-r from-white to-text-secondary bg-clip-text text-transparent">数据分析系统</span>
                 </div>
                 
-                <div class="mb-6 text-center">
-                    <h3 class="text-2xl font-bold mb-2">创建账号</h3>
-                    <p class="text-text-secondary text-sm">填写以下信息完成注册</p>
+                <div class="mb-8 text-center">
+                    <h3 class="text-3xl font-bold mb-3 bg-gradient-to-r from-white via-white to-text-secondary bg-clip-text text-transparent">创建账号</h3>
+                    <p class="text-text-secondary text-sm">填写以下信息，开启数据分析之旅</p>
                 </div>
                 
                 <form @submit.prevent="handleRegister" class="flex flex-col gap-4">
@@ -66,13 +120,17 @@
                     
                     <!-- 用户名 -->
                     <label class="flex flex-col gap-2">
-                        <span class="text-sm font-medium">用户名 <span class="text-red-400">*</span></span>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
-                                <span class="material-symbols-outlined text-xl">person</span>
+                        <span class="text-sm font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base text-primary">person</span>
+                            用户名
+                            <span class="text-red-400">*</span>
+                        </span>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary group-focus-within:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">account_circle</span>
                             </div>
                             <input v-model="form.username"
-                                   class="w-full h-12 pl-11 pr-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   class="input-glow w-full h-12 pl-11 pr-4 rounded-xl bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-0 focus:border-primary transition-all text-sm"
                                    placeholder="请输入用户名（3-20位）"
                                    type="text"
                                    maxlength="20"/>
@@ -81,14 +139,18 @@
                     
                     <!-- 昵称 -->
                     <label class="flex flex-col gap-2">
-                        <span class="text-sm font-medium">昵称</span>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
+                        <span class="text-sm font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base text-primary">badge</span>
+                            昵称
+                            <span class="text-xs text-text-secondary font-normal ml-1">(可选)</span>
+                        </span>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary group-focus-within:text-primary transition-colors">
                                 <span class="material-symbols-outlined text-xl">badge</span>
                             </div>
                             <input v-model="form.nickname"
-                                   class="w-full h-12 pl-11 pr-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                                   placeholder="请输入昵称（选填）"
+                                   class="input-glow w-full h-12 pl-11 pr-4 rounded-xl bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-0 focus:border-primary transition-all text-sm"
+                                   placeholder="请输入昵称（可选）"
                                    type="text"
                                    maxlength="50"/>
                         </div>
@@ -96,18 +158,22 @@
                     
                     <!-- 密码 -->
                     <label class="flex flex-col gap-2">
-                        <span class="text-sm font-medium">密码 <span class="text-red-400">*</span></span>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
+                        <span class="text-sm font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base text-primary">lock</span>
+                            密码 
+                            <span class="text-red-400">*</span>
+                        </span>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary group-focus-within:text-primary transition-colors">
                                 <span class="material-symbols-outlined text-xl">lock</span>
                             </div>
                             <input v-model="form.password"
                                    :type="showPassword ? 'text' : 'password'"
-                                   class="w-full h-12 pl-11 pr-11 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   class="input-glow w-full h-12 pl-11 pr-11 rounded-xl bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-0 focus:border-primary transition-all text-sm"
                                    placeholder="请输入密码（至少6位）"
                                    maxlength="32"/>
                             <button @click="showPassword = !showPassword"
-                                    class="absolute inset-y-0 right-0 flex items-center pr-4 text-text-secondary hover:text-primary transition-colors"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-4 text-text-secondary hover:text-primary transition-all hover:scale-110"
                                     type="button">
                                 <span class="material-symbols-outlined text-xl">
                                     {{ showPassword ? 'visibility_off' : 'visibility' }}
@@ -118,14 +184,18 @@
                     
                     <!-- 确认密码 -->
                     <label class="flex flex-col gap-2">
-                        <span class="text-sm font-medium">确认密码 <span class="text-red-400">*</span></span>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary">
-                                <span class="material-symbols-outlined text-xl">lock</span>
+                        <span class="text-sm font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base text-primary">verified</span>
+                            确认密码 
+                            <span class="text-red-400">*</span>
+                        </span>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-text-secondary group-focus-within:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">lock_reset</span>
                             </div>
                             <input v-model="form.confirmPassword"
                                    :type="showPassword ? 'text' : 'password'"
-                                   class="w-full h-12 pl-11 pr-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                   class="input-glow w-full h-12 pl-11 pr-4 rounded-xl bg-input-bg border border-input-border text-white placeholder:text-[#5d7c85] focus:ring-0 focus:border-primary transition-all text-sm"
                                    placeholder="请再次输入密码"/>
                         </div>
                     </label>
@@ -185,7 +255,7 @@ createApp({
                 return
             }
             if (form.username.length < 3) {
-                Toast.warning('用户名至少3个字符')
+                Toast.warning('用户名至少 3 个字符')
                 return
             }
             if (!form.password) {
@@ -193,7 +263,7 @@ createApp({
                 return
             }
             if (form.password.length < 6) {
-                Toast.warning('密码至少6位')
+                Toast.warning('密码至少 6 位')
                 return
             }
             if (form.password !== form.confirmPassword) {
@@ -217,7 +287,7 @@ createApp({
                 const result = await response.json()
                 
                 if (result.success) {
-                    Toast.success('注册成功！3秒后跳转到登录页...')
+                    Toast.success('注册成功，3 秒后跳转到登录页...')
                     
                     setTimeout(() => {
                         window.location.href = 'login.html'
