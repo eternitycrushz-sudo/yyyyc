@@ -7,12 +7,24 @@ from flask import Blueprint, request, jsonify, g
 import threading
 import sys
 import os
+import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from backend.utils.decorators import login_required, permission_required
+from backend.config import Config
 
 crawler_bp = Blueprint('crawler', __name__)
+
+def _get_db_config():
+    """从统一配置获取数据库连接信息"""
+    return {
+        'host': Config.DB_HOST,
+        'port': Config.DB_PORT,
+        'user': Config.DB_USER,
+        'password': Config.DB_PASSWORD,
+        'database': Config.DB_NAME
+    }
 
 # 爬虫状态
 crawler_status = {
@@ -81,13 +93,7 @@ def clean_all_data():
     data = request.get_json() or {}
     batch_size = data.get('batch_size', 100)
     
-    db_config = {
-        'host': 'localhost',
-        'port': 3306,
-        'user': 'root',
-        'password': '123456',
-        'database': 'dy_analysis_system'
-    }
+    db_config = _get_db_config()
     
     try:
         worker = CleanWorker(db_config)
@@ -124,13 +130,7 @@ def clean_handler_data(handler_name):
     task_id = data.get('task_id')
     batch_size = data.get('batch_size', 100)
     
-    db_config = {
-        'host': 'localhost',
-        'port': 3306,
-        'user': 'root',
-        'password': '123456',
-        'database': 'dy_analysis_system'
-    }
+    db_config = _get_db_config()
     
     try:
         worker = CleanWorker(db_config)
@@ -165,13 +165,7 @@ def clean_task_data(task_id):
     data = request.get_json() or {}
     batch_size = data.get('batch_size', 100)
     
-    db_config = {
-        'host': 'localhost',
-        'port': 3306,
-        'user': 'root',
-        'password': '123456',
-        'database': 'dy_analysis_system'
-    }
+    db_config = _get_db_config()
     
     try:
         worker = CleanWorker(db_config)
@@ -180,6 +174,56 @@ def clean_task_data(task_id):
         return jsonify({
             'success': True,
             'message': f"清洗完成: 成功 {result['total_processed']}, 失败 {result['total_failed']}",
+            'data': result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'清洗失败: {str(e)}'
+        }), 500
+
+
+# 表名 → handler 名称映射
+_TABLE_TO_HANDLER = {
+    'analysis_goods_trend_raw': 'goodsTrend',
+    'analysis_user_top_raw': 'goodsUserTop',
+    'analysis_user_list_raw': 'goodsUserList',
+    'analysis_live_trend_raw': 'goodsLiveSalesTrend',
+    'analysis_live_list_raw': 'goodsLiveList',
+    'analysis_live_relation_raw': 'goodsLiveRelation',
+    'analysis_video_sales_raw': 'goodsVideosales',
+    'analysis_video_list_raw': 'goodsVideoList',
+    'analysis_video_time_raw': 'goodsVideoTime',
+}
+
+
+@crawler_bp.route('/clean/table/<table_name>', methods=['POST'])
+@login_required
+@permission_required('crawler:clean')
+def clean_table_data(table_name):
+    """
+    按表名清洗单张表的数据
+
+    POST /api/crawler/clean/table/analysis_goods_trend_raw
+    """
+    from crawler.workers.clean_worker import CleanWorker
+
+    handler_name = _TABLE_TO_HANDLER.get(table_name)
+    if not handler_name:
+        return jsonify({'success': False, 'message': f'未知的表: {table_name}'}), 400
+
+    data = request.get_json() or {}
+    batch_size = data.get('batch_size', 200)
+
+    db_config = _get_db_config()
+
+    try:
+        worker = CleanWorker(db_config)
+        result = worker.clean_handler(handler_name, batch_size=batch_size)
+
+        return jsonify({
+            'success': True,
+            'message': f"{table_name} 清洗完成: 成功 {result.get('processed', 0)}, 失败 {result.get('failed', 0)}",
             'data': result
         })
     except Exception as e:
@@ -200,13 +244,7 @@ def get_clean_status():
     """
     import pymysql
     
-    db_config = {
-        'host': 'localhost',
-        'port': 3306,
-        'user': 'root',
-        'password': '123456',
-        'database': 'dy_analysis_system'
-    }
+    db_config = _get_db_config()
     
     # 原始数据表列表
     raw_tables = [
@@ -248,4 +286,87 @@ def get_clean_status():
         return jsonify({
             'success': False,
             'message': f'获取状态失败: {str(e)}'
+        }), 500
+
+
+# ============================================
+# 代理配置相关接口
+# ============================================
+
+@crawler_bp.route('/proxy', methods=['GET'])
+@login_required
+@permission_required('crawler:view')
+def get_proxy():
+    """获取当前代理配置"""
+    import os
+    proxy_url = os.getenv('PROXY_URL', '')
+    return jsonify({
+        'success': True,
+        'data': {'proxy_url': proxy_url}
+    })
+
+
+@crawler_bp.route('/proxy', methods=['POST'])
+@login_required
+@permission_required('crawler:start')
+def set_proxy():
+    """
+    设置代理
+
+    POST /api/crawler/proxy
+    Body: { "proxy_url": "http://user:pass@host:port" }
+    """
+    import os
+    data = request.get_json() or {}
+    proxy_url = data.get('proxy_url', '').strip()
+
+    os.environ['PROXY_URL'] = proxy_url
+
+    # 同步更新 Config 类
+    try:
+        Config.PROXY_URL = proxy_url
+    except Exception:
+        pass
+
+    return jsonify({
+        'success': True,
+        'message': f'代理已{"设置为 " + proxy_url if proxy_url else "清除"}'
+    })
+
+
+@crawler_bp.route('/proxy/test', methods=['POST'])
+@login_required
+@permission_required('crawler:start')
+def test_proxy():
+    """测试代理是否可用"""
+    import os
+    data = request.get_json() or {}
+    proxy_url = data.get('proxy_url', '').strip() or os.getenv('PROXY_URL', '')
+
+    if not proxy_url:
+        return jsonify({'success': False, 'message': '未配置代理地址'}), 400
+
+    proxies = {'http': proxy_url, 'https': proxy_url}
+
+    try:
+        # 测试连通性：通过代理访问目标网站
+        resp = requests.get(
+            'https://www.reduxingtui.com/',
+            proxies=proxies,
+            timeout=15,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                              'AppleWebKit/537.36 (KHTML, like Gecko) '
+                              'Chrome/131.0.0.0 Safari/537.36'
+            }
+        )
+        return jsonify({
+            'success': resp.status_code == 200,
+            'message': f'状态码: {resp.status_code}' + (' - 连接成功!' if resp.status_code == 200 else ' - 连接异常'),
+            'data': {'status_code': resp.status_code}
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'代理连接失败: {str(e)}'
         }), 500

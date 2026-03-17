@@ -8,6 +8,7 @@ from backend.models.user import UserModel
 from backend.models.role import RoleModel
 from backend.utils.jwt_util import create_token
 from backend.utils.decorators import login_required
+from backend.routes.oplog import log_operation
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -74,6 +75,12 @@ def login():
     # 获取权限
     permissions = UserModel.get_user_permissions(user['id'])
     
+    # 记录登录日志
+    try:
+        log_operation('登录', '认证', f"用户 {username} 登录成功", user_id=user['id'], username=username)
+    except:
+        pass
+
     return jsonify({
         'success': True,
         'message': '登录成功',
@@ -180,6 +187,115 @@ def get_user_info():
             'permissions': [p['code'] for p in permissions]
         }
     })
+
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    重置密码
+
+    请求：
+    {
+        "username": "test",
+        "new_password": "newpass123"
+    }
+    """
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    new_password = data.get('new_password', '')
+
+    if not username or not new_password:
+        return jsonify({
+            'success': False,
+            'message': '用户名和新密码不能为空'
+        }), 400
+
+    if len(new_password) < 6:
+        return jsonify({
+            'success': False,
+            'message': '新密码长度至少6位'
+        }), 400
+
+    # 查找用户
+    user = UserModel.find_by_username(username)
+    if not user:
+        return jsonify({
+            'success': False,
+            'message': '该用户名不存在'
+        }), 404
+
+    # 更新密码
+    try:
+        from backend.models.base import get_db_connection
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE sys_user SET password = %s WHERE username = %s",
+                (UserModel.hash_password(new_password), username)
+            )
+        conn.commit()
+        conn.close()
+
+        try:
+            log_operation('重置密码', '认证', f"用户 {username} 重置了密码")
+        except:
+            pass
+
+        return jsonify({
+            'success': True,
+            'message': '密码重置成功，请使用新密码登录'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'密码重置失败: {str(e)}'
+        }), 500
+
+
+@auth_bp.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """
+    修改自己的密码（需登录）
+
+    请求：
+    {
+        "old_password": "123456",
+        "new_password": "newpass123"
+    }
+    """
+    data = request.json or {}
+    old_password = data.get('old_password', '')
+    new_password = data.get('new_password', '')
+
+    if not old_password or not new_password:
+        return jsonify({'success': False, 'message': '旧密码和新密码不能为空'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': '新密码长度至少6位'}), 400
+
+    user_id = g.current_user['user_id']
+    user = UserModel.find_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': '用户不存在'}), 404
+
+    if UserModel.hash_password(old_password) != user['password']:
+        return jsonify({'success': False, 'message': '旧密码不正确'}), 400
+
+    try:
+        from backend.models.base import get_db_connection
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE sys_user SET password = %s WHERE id = %s",
+                (UserModel.hash_password(new_password), user_id)
+            )
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': '密码修改成功'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
 
 
 @auth_bp.route('/logout', methods=['POST'])

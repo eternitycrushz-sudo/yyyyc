@@ -18,9 +18,9 @@ class Config:
     DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = int(os.getenv('DB_PORT', 3306))
     DB_USER = os.getenv('DB_USER', 'root')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', '123456')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'Dy@analysis2024')
     DB_NAME = os.getenv('DB_NAME', 'dy_analysis_system')
-    
+
     # RabbitMQ 配置
     MQ_HOST = os.getenv('MQ_HOST', 'localhost')
     MQ_PORT = int(os.getenv('MQ_PORT', 5672))
@@ -28,7 +28,11 @@ class Config:
     MQ_PASSWORD = os.getenv('MQ_PASSWORD', 'guest')
     
     # API Token
-    API_TOKEN = os.getenv('API_TOKEN', '45114cedfddd64db6b0c5f0acf929487')
+    API_TOKEN = os.getenv('API_TOKEN', '7036afebb8e8c2449c74718738fa33bb')
+
+    # HTTP 代理配置（用于爬虫请求，防止 IP 被封）
+    # 格式: http://user:pass@host:port 或 socks5://host:port
+    PROXY_URL = os.getenv('PROXY_URL', '')
     
     # 智谱 AI 配置
     ZHIPU_API_KEY = os.getenv('ZHIPU_API_KEY', '3abf3efec6b745e6a2762da34c7f5a03.1xgrVFKLsa8Df398')

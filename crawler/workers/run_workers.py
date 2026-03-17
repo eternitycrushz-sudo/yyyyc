@@ -56,14 +56,16 @@ _config = get_config()
 DB_CONFIG = _config.get_db_config()
 MQ_CONFIG = {
     'mq_host': _config.MQ_HOST,
-    'mq_port': _config.MQ_PORT
+    'mq_port': _config.MQ_PORT,
+    'mq_user': _config.MQ_USER,
+    'mq_password': _config.MQ_PASSWORD
 }
 
 
 def run_list_worker():
     """运行 ListWorker"""
     from crawler.workers.list_worker import ListWorker
-    
+
     log.info("启动 ListWorker...")
     worker = ListWorker(db_config=DB_CONFIG, **MQ_CONFIG)
     worker.start()
@@ -72,7 +74,7 @@ def run_list_worker():
 def run_detail_worker():
     """运行 DetailWorker"""
     from crawler.workers.detail_worker import DetailWorker
-    
+
     log.info("启动 DetailWorker...")
     worker = DetailWorker(db_config=DB_CONFIG, **MQ_CONFIG)
     worker.start()
@@ -81,17 +83,17 @@ def run_detail_worker():
 def run_analysis_worker():
     """运行 AnalysisWorker"""
     from crawler.workers.analysis_worker import AnalysisWorker
-    
+
     log.info("启动 AnalysisWorker...")
     worker = AnalysisWorker(db_config=DB_CONFIG, days=30, **MQ_CONFIG)
     worker.start()
 
 
-# Worker 映射
+# Worker 映射（名称 -> (启动函数, 并发数)）
 WORKER_MAP = {
-    'list': run_list_worker,
-    'detail': run_detail_worker,
-    'analysis': run_analysis_worker
+    'list': (run_list_worker, 1),       # 列表爬取只需 1 个
+    'detail': (run_detail_worker, 3),   # 详情爬取 3 个并发
+    'analysis': (run_analysis_worker, 3) # 分析爬取 3 个并发
 }
 
 
@@ -110,24 +112,25 @@ def start_workers(worker_names: List[str] = None):
     """
     if worker_names is None:
         worker_names = list(WORKER_MAP.keys())
-    
+
     processes = []
-    
+
     log.info(f"准备启动 Worker: {worker_names}")
-    
+
     for name in worker_names:
         if name not in WORKER_MAP:
             log.warning(f"未知的 Worker: {name}")
             continue
-        
-        # 创建子进程
-        p = multiprocessing.Process(
-            target=WORKER_MAP[name],
-            name=f"Worker-{name}"
-        )
-        p.start()
-        processes.append(p)
-        log.info(f"Worker {name} 已启动 (PID: {p.pid})")
+
+        func, count = WORKER_MAP[name]
+        for i in range(count):
+            p = multiprocessing.Process(
+                target=func,
+                name=f"Worker-{name}-{i}"
+            )
+            p.start()
+            processes.append(p)
+            log.info(f"Worker {name}#{i} 已启动 (PID: {p.pid})")
     
     # 设置信号处理，支持 Ctrl+C 退出
     def signal_handler(signum, frame):

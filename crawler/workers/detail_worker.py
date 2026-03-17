@@ -52,8 +52,15 @@ class DetailWorker(BaseWorker):
     next_queue = QUEUE_ANALYSIS
     
     # API 配置
-    TOKEN = "45114cedfddd64db6b0c5f0acf929487"
     SHOP_VIEW_PATH = "/api/douke/view"
+
+    @classmethod
+    def _get_token(cls):
+        try:
+            from config import get_config
+            return get_config().API_TOKEN
+        except Exception:
+            return "7036afebb8e8c2449c74718738fa33bb"
     
     def __init__(self, db_config: Dict = None, **kwargs):
         """
@@ -69,7 +76,7 @@ class DetailWorker(BaseWorker):
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': '123456',
+            'password': 'Dy@analysis2024',
             'database': 'dy_analysis_system'
         }
         
@@ -139,8 +146,8 @@ class DetailWorker(BaseWorker):
         
         self.log.info(f"开始爬取商品详情: {product_id}")
         
-        # 随机延迟
-        time.sleep(random.uniform(0.5, 1))
+        # 短延迟，防止触发风控
+        time.sleep(random.uniform(0.1, 0.3))
         
         try:
             # 构造请求参数
@@ -157,7 +164,7 @@ class DetailWorker(BaseWorker):
             headers = ReduxSigner.get_headers(
                 signer['header_sign'],
                 signer['timestamp'],
-                self.TOKEN
+                self._get_token()
             )
             
             # 构造 URL 参数
@@ -187,20 +194,52 @@ class DetailWorker(BaseWorker):
     
     def clean(self, data: Dict) -> Dict:
         """
-        数据清洗（预留接口）
-        
-        TODO: 在这里实现数据清洗逻辑
-        - 字段提取
-        - 类型转换
-        - 数据校验
-        
-        Args:
-            data: 原始详情数据
-            
-        Returns:
-            清洗后的数据
+        数据清洗
+
+        清洗规则：
+        1. 标题清洗：去空白、截断超长标题
+        2. 价格校验：转 float，过滤异常值
+        3. 佣金率校验：范围 0-100%
+        4. 销量解析：统一 "1000w-2500w" 等格式为数字
+        5. 空值填充默认值
         """
-        # 预留接口，暂时直接返回
+        if not data:
+            return data
+
+        # 标题清洗
+        if data.get('title'):
+            data['title'] = data['title'].strip()[:500]
+
+        # 价格字段校验
+        for field in ['price', 'coupon', 'coupon_price']:
+            val = data.get(field)
+            if val is not None:
+                try:
+                    val = float(val)
+                    data[field] = val if 0 <= val <= 999999 else 0
+                except (ValueError, TypeError):
+                    data[field] = 0
+
+        # 佣金率校验（0-100%）
+        for field in ['cos_ratio', 'commission_rate']:
+            val = data.get(field)
+            if val is not None:
+                try:
+                    val = float(val)
+                    data[field] = val if 0 <= val <= 100 else 0
+                except (ValueError, TypeError):
+                    data[field] = 0
+
+        # 店铺名清洗
+        if data.get('shop_name'):
+            data['shop_name'] = data['shop_name'].strip()[:200]
+
+        # 空值填充
+        data.setdefault('platform', 'douyin')
+        data.setdefault('cover', '')
+        data.setdefault('shop_name', '')
+        data.setdefault('category_name', '')
+
         return data
     
     def save(self, data: Dict, message: Dict[str, Any]):
@@ -224,8 +263,8 @@ class DetailWorker(BaseWorker):
         
         # 提取字段（根据实际接口返回调整）
         insert_sql = """
-        INSERT INTO `product_detail` 
-        (product_id, title, cover, price, commission_rate, shop_name, shop_id, 
+        INSERT INTO `product_detail`
+        (product_id, title, cover, price, commission_rate, shop_name, shop_id,
          category_name, sell_num, platform, raw_data)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
@@ -239,10 +278,30 @@ class DetailWorker(BaseWorker):
             raw_data = VALUES(raw_data),
             updated_at = CURRENT_TIMESTAMP
         """
-        
+
+        # 解析销量（API 返回 "1000w-2500w" 这样的字符串）
+        sales_raw = data.get('sales', data.get('sell_num', 0))
+        sell_num = 0
+        if isinstance(sales_raw, (int, float)):
+            sell_num = int(sales_raw)
+        elif isinstance(sales_raw, str):
+            sales_raw = sales_raw.replace(',', '').strip()
+            try:
+                if 'w' in sales_raw.lower():
+                    # 取第一个数字（如 "1000w-2500w" 取 1000）
+                    num_str = sales_raw.lower().split('w')[0].split('-')[0]
+                    sell_num = int(float(num_str) * 10000)
+                elif '万' in sales_raw:
+                    num_str = sales_raw.replace('万', '').split('-')[0]
+                    sell_num = int(float(num_str) * 10000)
+                else:
+                    sell_num = int(float(sales_raw.split('-')[0]))
+            except (ValueError, IndexError):
+                sell_num = 0
+
         try:
             import json
-            
+
             conn = pymysql.connect(**self.db_config)
             with conn.cursor() as cursor:
                 cursor.execute(insert_sql, (
@@ -250,11 +309,11 @@ class DetailWorker(BaseWorker):
                     data.get('title', ''),
                     data.get('cover', ''),
                     data.get('price', 0),
-                    data.get('commission_rate', 0),
+                    data.get('cos_ratio', data.get('commission_rate', 0)),
                     data.get('shop_name', ''),
                     data.get('shop_id', ''),
                     data.get('category_name', ''),
-                    data.get('sell_num', 0),
+                    sell_num,
                     data.get('platform', 'douyin'),
                     json.dumps(data, ensure_ascii=False)
                 ))
@@ -270,21 +329,19 @@ class DetailWorker(BaseWorker):
     def get_next_tasks(self, data: Dict, message: Dict[str, Any]) -> Optional[List[Dict]]:
         """
         生成分析任务
-        
+
         原理：
         1. 将 product_id 传递到分析队列
         2. 分析接口使用 goods_id（和 product_id 相同）
-        
+        3. 即使详情爬取失败也发送，确保分析数据（或 mock）能生成
+
         Args:
             data: 详情数据
             message: 原始消息
-            
+
         Returns:
             分析任务列表
         """
-        if not data:
-            return None
-        
         product_id = message.get('product_id')
         task_id = message.get('task_id')
         
@@ -323,7 +380,7 @@ if __name__ == '__main__':
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': '123456',
+            'password': 'Dy@analysis2024',
             'database': 'dy_analysis_system'
         }
     )

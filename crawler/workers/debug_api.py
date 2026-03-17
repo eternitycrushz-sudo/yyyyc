@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from crawler.dy_xingtui.ReduxSiger import ReduxSigner
 import requests
 
-TOKEN = "45114cedfddd64db6b0c5f0acf929487"
+TOKEN = "7036afebb8e8c2449c74718738fa33bb"
 BASE_URL = "https://www.reduxingtui.com"
 
 def test_api(api_path, goods_id, start_time, end_time, page_no=1, page_size=10):

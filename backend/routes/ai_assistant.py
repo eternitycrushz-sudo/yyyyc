@@ -38,17 +38,16 @@ def get_database_context(user_message, product_id=None):
         # 如果有商品ID，优先获取该商品信息
         if product_id:
             cursor.execute("""
-                SELECT title, price, cos_fee, sales, labels, shop_name, view_num, cos_ratio
+                SELECT title, price, cos_fee, sales, labels, shop_name, view_num, cos_ratio, category_name
                 FROM goods_list
                 WHERE product_id = %s
             """, (product_id,))
             current_goods = cursor.fetchone()
-            
+
             if current_goods:
                 try:
-                    labels = json.loads(current_goods['labels']) if current_goods['labels'] else []
-                    label_names = [l['name'] if isinstance(l, dict) else str(l) for l in labels]
-                    
+                    cat_name = current_goods.get('category_name', '')
+
                     goods_info = f"""当前商品详细信息：
 商品名称：{current_goods['title']}
 价格：¥{current_goods['price']}
@@ -56,25 +55,24 @@ def get_database_context(user_message, product_id=None):
 销量：{current_goods['sales']}
 浏览量：{current_goods['view_num']}
 店铺：{current_goods['shop_name']}
-分类：{','.join(label_names)}
+分类：{cat_name}
 
 """
                     context.append(goods_info)
-                    
+
                     # 获取同类商品推荐
-                    if label_names:
-                        main_category = label_names[0] if label_names else ''
+                    if cat_name:
                         cursor.execute("""
                             SELECT title, price, cos_fee, sales, shop_name
                             FROM goods_list
-                            WHERE labels LIKE %s AND product_id != %s
+                            WHERE category_name = %s AND product_id != %s
                             ORDER BY sales DESC
                             LIMIT 3
-                        """, (f'%{main_category}%', product_id))
+                        """, (cat_name, product_id))
                         similar_goods = cursor.fetchall()
                         
                         if similar_goods:
-                            similar_info = f"同类商品推荐（{main_category}）：\n"
+                            similar_info = f"同类商品推荐（{cat_name}）：\n"
                             for i, goods in enumerate(similar_goods, 1):
                                 similar_info += f"{i}. {goods['title'][:30]}... - 价格:¥{goods['price']}, 佣金:¥{goods['cos_fee']}, 销量:{goods['sales']}\n"
                             context.append(similar_info)
@@ -378,9 +376,6 @@ def chat():
         }), 400
 
     user_id = g.current_user['user_id']
-    session_pk, created = AiChatModel.ensure_session(user_id, session_id)
-    if created:
-        AiChatModel.update_session_title(session_pk, user_message[:50])
 
     try:
         # 创建或获取会话
@@ -530,53 +525,15 @@ def get_sessions():
 @ai_bp.route('/session/messages', methods=['GET'])
 @login_required
 def get_session_messages():
-    """
-    获取会话历史消息
-    参数:
-        session_id: 会话ID
-        limit: 最大消息数
-    """
+    """获取会话历史消息"""
     session_id = (request.args.get('session_id') or '').strip() or 'default'
     limit = int(request.args.get('limit', 50))
-    if limit < 1:
-        limit = 50
-    if limit > 200:
-        limit = 200
-
     user_id = g.current_user['user_id']
-    session = AiChatModel.get_session(user_id, session_id)
-    if not session:
-        return jsonify({
-            'success': True,
-            'data': []
-        })
 
-    messages = AiChatModel.get_recent_messages(session['id'], limit=limit)
+    history = get_chat_history(user_id, session_id, limit=limit)
     return jsonify({
         'success': True,
-        'data': messages
-    })
-
-
-@ai_bp.route('/sessions', methods=['GET'])
-@login_required
-def list_sessions():
-    """
-    获取会话列表
-    参数:
-        limit: 最大会话数
-    """
-    limit = int(request.args.get('limit', 50))
-    if limit < 1:
-        limit = 50
-    if limit > 200:
-        limit = 200
-
-    user_id = g.current_user['user_id']
-    sessions = AiChatModel.list_sessions(user_id, limit=limit)
-    return jsonify({
-        'success': True,
-        'data': sessions
+        'data': history
     })
 
 

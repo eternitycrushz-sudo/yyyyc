@@ -48,7 +48,7 @@ def get_goods_trend(product_id):
         user_count_data = []
         
         for row in rows:
-            dates.append(row['date'][5:])  # 只保留月-日
+            dates.append(str(row['date'])[5:])  # 只保留月-日
             sales_data.append(int(row['sales_count']) if row['sales_count'] else 0)
             amount_data.append(float(row['sales_amount']) if row['sales_amount'] else 0)
             video_count_data.append(int(row['video_count']) if row['video_count'] else 0)
@@ -115,7 +115,7 @@ def get_goods_kol(product_id):
         new_kol_data = []
         
         for row in trend_rows:
-            dates.append(row['date'][5:])
+            dates.append(str(row['date'])[5:])
             daily_kol_data.append(int(row['video_count']) if row['video_count'] else 0)
             new_kol_data.append(int(row['user_count']) if row['user_count'] else 0)
         
@@ -180,7 +180,7 @@ def get_goods_video(product_id):
         comment_data = []
         
         for row in rows:
-            dates.append(row['date'][5:])
+            dates.append(str(row['date'])[5:])
             video_count_data.append(int(row['video_count']) if row['video_count'] else 0)
             video_views_data.append(int(row['play_count']) if row['play_count'] else 0)
             video_sales_data.append(int(row['sales_count']) if row['sales_count'] else 0)
@@ -237,7 +237,7 @@ def get_goods_live(product_id):
         live_viewer_data = []
         
         for row in rows:
-            dates.append(row['date'][5:])
+            dates.append(str(row['date'])[5:])
             live_count_data.append(int(row['live_count']) if row['live_count'] else 0)
             live_sales_data.append(int(row['sales_count']) if row['sales_count'] else 0)
             live_amount_data.append(float(row['sales_amount']) if row['sales_amount'] else 0)

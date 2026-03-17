@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>数据仪表盘 - 抖音电商分析系统</title>
+    <link href="css/fonts.css?v=5" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
+        .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
+        [v-cloak] { display: none !important; }
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .text-white { color: #111827 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        body, * { font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
+
+<div id="app" class="flex h-screen" v-cloak>
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-white dark:bg-surface-dark border-r border-gray-200 dark:border-input-border flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">analytics</span>
+                </div>
+                <span class="font-bold text-lg">数据分析系统</span>
+            </div>
+        </div>
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
+            <a href="index.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">home</span>首页
+            </a>
+            <a href="dashboard.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary">
+                <span class="material-symbols-outlined text-xl">dashboard</span>数据仪表盘
+            </a>
+            <a href="prediction.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">trending_up</span>热点预测
+            </a>
+            <a href="compare.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">compare_arrows</span>商品对比
+            </a>
+            <a href="favorites.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">favorite</span>我的收藏
+            </a>
+            <a href="ai_assistant.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">smart_toy</span>AI 智能助手
+            </a>
+            <a v-if="hasCrawlerPerm" href="crawler.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">bug_report</span>爬虫任务
+            </a>
+            <a href="settings.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">settings</span>系统设置
+            </a>
+        </nav>
+        <div class="p-4 border-t border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ user?.nickname || user?.username }}</div>
+                    <div class="text-xs text-text-secondary">{{ user?.roles?.[0]?.name || '用户' }}</div>
+                </div>
+                <button @click="handleLogout" class="p-2 hover:bg-input-bg rounded-lg" title="退出登录">
+                    <span class="material-symbols-outlined text-text-secondary hover:text-red-400">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-input-border flex items-center justify-between px-6">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-semibold">数据仪表盘</h1>
+                <a href="bigscreen.html" target="_blank" class="px-3 py-1 bg-primary/10 text-primary rounded-lg text-xs hover:bg-primary/20 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">fullscreen</span>数据大屏
+                </a>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- 定时任务控制 -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-text-secondary">自动更新:</span>
+                    <button v-if="!scheduler.enabled" @click="startScheduler"
+                            class="px-3 py-1 bg-primary text-background-dark rounded-lg text-sm hover:bg-primary/90">
+                        启动
+                    </button>
+                    <button v-else @click="stopScheduler"
+                            class="px-3 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30">
+                        停止
+                    </button>
+                    <select v-model="schedulerInterval" @change="updateSchedulerInterval"
+                            class="px-2 py-1 bg-input-bg border border-input-border rounded-lg text-sm">
+                        <option :value="5">5分钟</option>
+                        <option :value="15">15分钟</option>
+                        <option :value="30">30分钟</option>
+                        <option :value="60">1小时</option>
+                        <option :value="180">3小时</option>
+                        <option :value="360">6小时</option>
+                    </select>
+                </div>
+                <span class="text-sm text-text-secondary">{{ currentTime }}</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-background-dark">
+            <!-- 概览卡片 -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div v-for="card in overviewCards" :key="card.label"
+                     class="bg-white dark:bg-card-dark rounded-xl p-5 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-text-secondary text-sm">{{ card.label }}</span>
+                        <span :class="['material-symbols-outlined text-2xl', card.color]">{{ card.icon }}</span>
+                    </div>
+                    <div class="text-2xl font-bold mb-1">{{ card.value }}</div>
+                    <div class="text-xs text-text-secondary">{{ card.desc }}</div>
+                </div>
+            </div>
+
+            <!-- 图表区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- 每日新增趋势 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold">每日新增商品趋势</h3>
+                        <select v-model="trendDays" @change="loadDailyTrend"
+                                class="px-2 py-1 bg-input-bg border border-input-border rounded text-sm">
+                            <option :value="7">近7天</option>
+                            <option :value="14">近14天</option>
+                            <option :value="30">近30天</option>
+                        </select>
+                    </div>
+                    <div id="chart-daily-trend" style="height: 300px;"></div>
+                </div>
+
+                <!-- 价格分布 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="font-semibold mb-4">价格区间分布</h3>
+                    <div id="chart-price-dist" style="height: 300px;"></div>
+                </div>
+
+                <!-- 分类统计 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="font-semibold mb-4">商品分类分布</h3>
+                    <div id="chart-category" style="height: 300px;"></div>
+                </div>
+
+                <!-- TOP 店铺 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="font-semibold mb-4">商品数量 TOP 10 店铺</h3>
+                    <div id="chart-top-shops" style="height: 300px;"></div>
+                </div>
+            </div>
+
+            <!-- 佣金排行榜 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold">佣金排行榜 TOP 10</h3>
+                    <button @click="exportCSV" class="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20">
+                        <span class="material-symbols-outlined text-base">download</span>导出数据
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-input-border text-text-secondary text-left">
+                                <th class="pb-3 pr-4">排名</th>
+                                <th class="pb-3 pr-4">商品</th>
+                                <th class="pb-3 pr-4">价格</th>
+                                <th class="pb-3 pr-4">佣金</th>
+                                <th class="pb-3 pr-4">佣金比例</th>
+                                <th class="pb-3">店铺</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in commissionRanking" :key="item.product_id"
+                                class="border-b border-input-border/50 hover:bg-input-bg/50">
+                                <td class="py-3 pr-4">
+                                    <span :class="['inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold',
+                                                    idx < 3 ? 'bg-primary text-background-dark' : 'bg-input-bg text-text-secondary']">
+                                        {{ idx + 1 }}
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-4 max-w-xs truncate">{{ item.title }}</td>
+                                <td class="py-3 pr-4 text-red-400 font-medium">&yen;{{ (item.price || 0).toFixed(2) }}</td>
+                                <td class="py-3 pr-4 text-primary font-bold">&yen;{{ (item.cos_fee || 0).toFixed(2) }}</td>
+                                <td class="py-3 pr-4">{{ ((item.cos_ratio || 0) * 100).toFixed(1) }}%</td>
+                                <td class="py-3 text-text-secondary">{{ item.shop_name || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 定时任务状态 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                <h3 class="font-semibold mb-4">自动更新状态</h3>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="p-4 bg-input-bg rounded-lg">
+                        <div class="text-text-secondary text-xs mb-1">状态</div>
+                        <div :class="scheduler.enabled ? 'text-green-400' : 'text-text-secondary'" class="font-medium">
+                            {{ scheduler.enabled ? '运行中' : '未启动' }}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-input-bg rounded-lg">
+                        <div class="text-text-secondary text-xs mb-1">更新间隔</div>
+                        <div class="font-medium">{{ scheduler.interval_minutes }} 分钟</div>
+                    </div>
+                    <div class="p-4 bg-input-bg rounded-lg">
+                        <div class="text-text-secondary text-xs mb-1">上次运行</div>
+                        <div class="font-medium text-sm">{{ scheduler.last_run || '从未运行' }}</div>
+                    </div>
+                    <div class="p-4 bg-input-bg rounded-lg">
+                        <div class="text-text-secondary text-xs mb-1">累计执行</div>
+                        <div class="font-medium">{{ scheduler.run_count }} 次</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted, onUnmounted } = Vue
+const API_BASE = 'http://localhost:5001/api'
+
+createApp({
+    setup() {
+        const user = ref(null)
+        const hasCrawlerPerm = ref(false)
+        const currentTime = ref('')
+        const trendDays = ref(30)
+        const schedulerInterval = ref(60)
+        const commissionRanking = ref([])
+        const scheduler = reactive({
+            enabled: false,
+            interval_minutes: 60,
+            last_run: null,
+            next_run: null,
+            running: false,
+            run_count: 0,
+        })
+
+        const overviewCards = ref([
+            { label: '商品总数', value: '0', icon: 'inventory_2', color: 'text-primary', desc: '已采集商品总数' },
+            { label: '今日新增', value: '0', icon: 'add_circle', color: 'text-green-400', desc: '较昨日变化' },
+            { label: '平均价格', value: '0', icon: 'payments', color: 'text-purple-400', desc: '商品均价' },
+            { label: '店铺总数', value: '0', icon: 'storefront', color: 'text-yellow-400', desc: '已采集店铺' },
+        ])
+
+        // Charts
+        let chartTrend = null
+        let chartPrice = null
+        let chartCategory = null
+        let chartShops = null
+
+        const getToken = () => localStorage.getItem('token')
+
+        const request = async (url, options = {}) => {
+            const token = getToken()
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            }
+            const response = await fetch(`${API_BASE}${url}`, { ...options, headers })
+            if (response.status === 401) {
+                localStorage.removeItem('token')
+                localStorage.removeItem('user')
+                window.location.href = 'login.html'
+                return
+            }
+            return response.json()
+        }
+
+        const checkAuth = () => {
+            const token = getToken()
+            const savedUser = localStorage.getItem('user')
+            if (!token || !savedUser) {
+                window.location.href = 'login.html'
+                return
+            }
+            user.value = JSON.parse(savedUser)
+            hasCrawlerPerm.value = (user.value.permissions || []).includes('crawler:start')
+        }
+
+        const handleLogout = async () => {
+            await request('/auth/logout', { method: 'POST' })
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = 'login.html'
+        }
+
+        const isDark = () => document.documentElement.classList.contains('dark')
+        const textColor = () => isDark() ? '#92c0c9' : '#6b7280'
+        const gridColor = () => isDark() ? '#325e67' : '#e5e7eb'
+
+        // 加载概览数据
+        const loadOverview = async () => {
+            try {
+                const res = await request('/dashboard/overview')
+                if (res.code === 0) {
+                    const d = res.data
+                    overviewCards.value[0].value = d.total_goods.toLocaleString()
+                    overviewCards.value[1].value = d.today_count.toLocaleString()
+                    const growth = d.yesterday_count > 0
+                        ? (((d.today_count - d.yesterday_count) / d.yesterday_count) * 100).toFixed(1)
+                        : '--'
+                    overviewCards.value[1].desc = `较昨日 ${growth === '--' ? '--' : (growth >= 0 ? '+' + growth : growth)}%`
+                    overviewCards.value[2].value = `\u00a5${d.avg_price}`
+                    overviewCards.value[3].value = d.total_shops.toLocaleString()
+                }
+            } catch (e) { console.error('loadOverview:', e) }
+        }
+
+        // 每日趋势图
+        const loadDailyTrend = async () => {
+            try {
+                const res = await request(`/dashboard/daily_trend?days=${trendDays.value}`)
+                if (res.code === 0) {
+                    if (!chartTrend) {
+                        chartTrend = echarts.init(document.getElementById('chart-daily-trend'))
+                    }
+                    chartTrend.setOption({
+                        tooltip: { trigger: 'axis' },
+                        grid: { left: 50, right: 20, top: 20, bottom: 30 },
+                        xAxis: {
+                            type: 'category',
+                            data: res.data.dates.map(d => d.slice(5)),
+                            axisLabel: { color: textColor() },
+                            axisLine: { lineStyle: { color: gridColor() } }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: { color: textColor() },
+                            splitLine: { lineStyle: { color: gridColor() } }
+                        },
+                        series: [{
+                            type: 'bar',
+                            data: res.data.counts,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#13c8ec' },
+                                    { offset: 1, color: 'rgba(19,200,236,0.2)' }
+                                ]),
+                                borderRadius: [4, 4, 0, 0]
+                            }
+                        }]
+                    })
+                }
+            } catch (e) { console.error('loadDailyTrend:', e) }
+        }
+
+        // 价格分布图
+        const loadPriceDistribution = async () => {
+            try {
+                const res = await request('/dashboard/price_distribution')
+                if (res.code === 0) {
+                    if (!chartPrice) {
+                        chartPrice = echarts.init(document.getElementById('chart-price-dist'))
+                    }
+                    chartPrice.setOption({
+                        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                        series: [{
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            data: res.data,
+                            label: { color: textColor(), fontSize: 12 },
+                            itemStyle: { borderRadius: 6, borderColor: isDark() ? '#1a3035' : '#fff', borderWidth: 2 },
+                            emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } }
+                        }],
+                        color: ['#13c8ec', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#ec4899']
+                    })
+                }
+            } catch (e) { console.error('loadPriceDistribution:', e) }
+        }
+
+        // 分类统计图
+        const loadCategoryStats = async () => {
+            try {
+                const res = await request('/dashboard/category_stats')
+                if (res.code === 0 && res.data.length > 0) {
+                    if (!chartCategory) {
+                        chartCategory = echarts.init(document.getElementById('chart-category'))
+                    }
+                    chartCategory.setOption({
+                        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                        series: [{
+                            type: 'pie',
+                            radius: '65%',
+                            data: res.data,
+                            label: { color: textColor(), fontSize: 12 },
+                            itemStyle: { borderRadius: 4 },
+                        }],
+                        color: ['#13c8ec', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#ec4899', '#06b6d4', '#f97316']
+                    })
+                }
+            } catch (e) { console.error('loadCategoryStats:', e) }
+        }
+
+        // TOP 店铺图
+        const loadTopShops = async () => {
+            try {
+                const res = await request('/dashboard/top_shops?limit=10')
+                if (res.code === 0 && res.data.length > 0) {
+                    if (!chartShops) {
+                        chartShops = echarts.init(document.getElementById('chart-top-shops'))
+                    }
+                    const names = res.data.map(d => d.shop_name).reverse()
+                    const counts = res.data.map(d => d.goods_count).reverse()
+                    chartShops.setOption({
+                        tooltip: { trigger: 'axis' },
+                        grid: { left: 120, right: 30, top: 10, bottom: 20 },
+                        xAxis: {
+                            type: 'value',
+                            axisLabel: { color: textColor() },
+                            splitLine: { lineStyle: { color: gridColor() } }
+                        },
+                        yAxis: {
+                            type: 'category',
+                            data: names,
+                            axisLabel: {
+                                color: textColor(),
+                                width: 100,
+                                overflow: 'truncate',
+                                fontSize: 11
+                            },
+                            axisLine: { lineStyle: { color: gridColor() } }
+                        },
+                        series: [{
+                            type: 'bar',
+                            data: counts,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                    { offset: 0, color: 'rgba(19,200,236,0.3)' },
+                                    { offset: 1, color: '#13c8ec' }
+                                ]),
+                                borderRadius: [0, 4, 4, 0]
+                            }
+                        }]
+                    })
+                }
+            } catch (e) { console.error('loadTopShops:', e) }
+        }
+
+        // 佣金排行
+        const loadCommissionRanking = async () => {
+            try {
+                const res = await request('/dashboard/commission_ranking?limit=10')
+                if (res.code === 0) {
+                    commissionRanking.value = res.data
+                }
+            } catch (e) { console.error('loadCommissionRanking:', e) }
+        }
+
+        // 定时任务
+        const loadSchedulerStatus = async () => {
+            try {
+                const res = await request('/scheduler/status')
+                if (res.success) {
+                    Object.assign(scheduler, res.data)
+                    schedulerInterval.value = scheduler.interval_minutes
+                }
+            } catch (e) { console.error('loadSchedulerStatus:', e) }
+        }
+
+        const startScheduler = async () => {
+            try {
+                const res = await request('/scheduler/start', {
+                    method: 'POST',
+                    body: JSON.stringify({ interval_minutes: schedulerInterval.value })
+                })
+                if (res.success) {
+                    Toast.success(res.message)
+                    loadSchedulerStatus()
+                } else {
+                    Toast.error(res.message)
+                }
+            } catch (e) { Toast.error('启动失败: ' + e.message) }
+        }
+
+        const stopScheduler = async () => {
+            try {
+                const res = await request('/scheduler/stop', { method: 'POST' })
+                if (res.success) {
+                    Toast.success(res.message)
+                    loadSchedulerStatus()
+                } else {
+                    Toast.error(res.message)
+                }
+            } catch (e) { Toast.error('停止失败: ' + e.message) }
+        }
+
+        const updateSchedulerInterval = async () => {
+            try {
+                await request('/scheduler/update', {
+                    method: 'POST',
+                    body: JSON.stringify({ interval_minutes: schedulerInterval.value })
+                })
+            } catch (e) { console.error(e) }
+        }
+
+        // 导出
+        const exportCSV = () => {
+            const token = getToken()
+            window.open(`${API_BASE}/export/goods/csv?token=${token}`, '_blank')
+        }
+
+        let timeInterval
+        const updateTime = () => {
+            currentTime.value = new Date().toLocaleString('zh-CN')
+        }
+
+        // 窗口 resize 自适应图表
+        const handleResize = () => {
+            chartTrend?.resize()
+            chartPrice?.resize()
+            chartCategory?.resize()
+            chartShops?.resize()
+        }
+
+        onMounted(() => {
+            // 初始化主题
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark')
+            } else {
+                document.documentElement.classList.add('dark')
+            }
+
+            checkAuth()
+            updateTime()
+            timeInterval = setInterval(updateTime, 1000)
+
+            // 加载所有数据
+            loadOverview()
+            loadDailyTrend()
+            loadPriceDistribution()
+            loadCategoryStats()
+            loadTopShops()
+            loadCommissionRanking()
+            loadSchedulerStatus()
+
+            window.addEventListener('resize', handleResize)
+
+            // 定时刷新定时任务状态
+            setInterval(loadSchedulerStatus, 30000)
+        })
+
+        onUnmounted(() => {
+            clearInterval(timeInterval)
+            window.removeEventListener('resize', handleResize)
+            chartTrend?.dispose()
+            chartPrice?.dispose()
+            chartCategory?.dispose()
+            chartShops?.dispose()
+        })
+
+        return {
+            user, hasCrawlerPerm, currentTime, overviewCards, trendDays, commissionRanking,
+            scheduler, schedulerInterval,
+            handleLogout, loadDailyTrend,
+            startScheduler, stopScheduler, updateSchedulerInterval,
+            exportCSV
+        }
+    }
+}).mount('#app')
+</script>
+</body>
+</html>

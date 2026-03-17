@@ -12,6 +12,51 @@ logger = logging.getLogger(__name__)
 
 goods_bp = Blueprint('goods', __name__)
 
+# first_cid -> 分类名称映射
+FIRST_CID_CATEGORY_MAP = {
+    '20115': '家居日用', '20018': '食品饮料', '20104': '食品饮料',
+    '20040': '家居日用', '20068': '母婴用品', '20056': '美妆个护',
+    '20073': '家居日用', '20005': '服饰鞋包', '20015': '家居日用',
+    '20017': '食品饮料', '20035': '家居日用', '20048': '家居日用',
+    '20080': '饰品配件', '20070': '家居日用', '20076': '家居日用',
+    '20013': '家居日用', '20029': '美妆个护', '20062': '服饰鞋包',
+    '20066': '美妆个护', '20069': '家居日用', '20072': '家居日用',
+    '20090': '家居日用', '20093': '服饰鞋包', '20094': '家居日用',
+    '20107': '家居日用', '20109': '美妆个护', '20113': '家居日用',
+    '20120': '食品饮料', '38944': '食品饮料', '38946': '食品饮料',
+}
+
+# 默认分类（当 first_cid 无法匹配时，根据关键词推断）
+KEYWORD_CATEGORY_MAP = {
+    '食品饮料': ['零食', '饮料', '麦片', '燕麦', '食品', '饼干', '糖', '酱', '茶', '咖啡', '奶', '肉', '鱼', '虾', '果', '菜', '调料', '醋', '油', '面', '米', '粥', '汤', '膏', '蜂蜜', '坚果'],
+    '家居日用': ['清洁', '洗衣', '垃圾袋', '收纳', '厨房', '家居', '毛巾', '纸巾', '牙刷', '拖把', '刷子', '贴', '灯', '花', '植物', '工具', '胶带'],
+    '美妆个护': ['面膜', '口红', '眉笔', '洗面', '护肤', '化妆', '美妆', '香水', '防晒', '乳液', '精华', '卸妆', '皂', '维生素', '身体', '沐浴'],
+    '服饰鞋包': ['裤', '衣', '鞋', '袜', '帽', '围巾', '手套', '包', '裙', '外套', '内衣', '睡衣'],
+    '母婴用品': ['儿童', '宝宝', '婴', '奶瓶', '尿', '玩具', '童装', '孕'],
+    '饰品配件': ['项链', '手链', '耳环', '戒指', '发夹', '发卡', '手表', '饰品', '配饰'],
+    '数码家电': ['手机', '电脑', '耳机', '充电', '数码', '家电', '风扇', '加湿', '电器'],
+    '运动户外': ['运动', '健身', '瑜伽', '跑步', '户外', '露营', '钓鱼', '球'],
+}
+
+
+def guess_category_by_title(title):
+    """根据商品标题关键词推断分类"""
+    if not title:
+        return '家居日用'
+    for cat, keywords in KEYWORD_CATEGORY_MAP.items():
+        for kw in keywords:
+            if kw in title:
+                return cat
+    return '家居日用'
+
+
+def get_category_for_product(first_cid, title=''):
+    """获取商品分类名称"""
+    cid_str = str(first_cid) if first_cid else ''
+    if cid_str in FIRST_CID_CATEGORY_MAP:
+        return FIRST_CID_CATEGORY_MAP[cid_str]
+    return guess_category_by_title(title)
+
 
 def parse_chinese_number(value):
     """
@@ -54,6 +99,28 @@ def parse_chinese_number(value):
         return int(float(value))
     except:
         return 0
+
+
+@goods_bp.route('/categories', methods=['GET'])
+@login_required
+def get_categories():
+    """获取商品分类列表及数量"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT category_name, COUNT(*) as count
+            FROM goods_list
+            WHERE category_name IS NOT NULL AND category_name != ''
+            GROUP BY category_name
+            ORDER BY count DESC
+        """)
+        categories = [{'name': row['category_name'], 'count': row['count']} for row in cursor.fetchall()]
+        conn.close()
+        return jsonify({'code': 0, 'data': categories})
+    except Exception as e:
+        logger.error(f"获取分类失败: {e}")
+        return jsonify({'code': -1, 'message': str(e)})
 
 
 @goods_bp.route('/search', methods=['GET'])
@@ -235,13 +302,27 @@ def get_goods_list():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # 时间过滤
+        start_date = request.args.get('start_date', '')
+        end_date = request.args.get('end_date', '')
+
         # 构建WHERE子句
-        where_clause = ""
+        where_parts = []
         query_params = []
-        
+
         if category:
-            where_clause = "WHERE labels LIKE %s"
-            query_params.append(f'%{category}%')
+            where_parts.append("category_name = %s")
+            query_params.append(category)
+
+        if start_date:
+            where_parts.append("DATE(created_at) >= %s")
+            query_params.append(start_date)
+
+        if end_date:
+            where_parts.append("DATE(created_at) <= %s")
+            query_params.append(end_date)
+
+        where_clause = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
         
         # 查询总数
         count_query = f"SELECT COUNT(*) as total FROM goods_list {where_clause}"
@@ -373,8 +454,8 @@ def get_goods_stats():
             'data': {
                 'total_goods': total_goods,
                 'today_count': today_count,
-                'avg_price': round(avg_price, 2),
-                'avg_commission': round(avg_commission, 2)
+                'avg_price': float(round(avg_price, 2)),
+                'avg_commission': float(round(avg_commission, 2))
             }
         })
         

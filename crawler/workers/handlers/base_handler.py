@@ -46,7 +46,14 @@ class BaseApiHandler(ABC):
     # API 配置
     BASE_URL = "https://www.reduxingtui.com"
     BASE_API = "/api/douke/dcc"
-    TOKEN = "45114cedfddd64db6b0c5f0acf929487"
+
+    @classmethod
+    def _get_token(cls):
+        try:
+            from config import get_config
+            return get_config().API_TOKEN
+        except Exception:
+            return "7036afebb8e8c2449c74718738fa33bb"
     
     def __init__(self, db_config: Dict, task_manager=None):
         """
@@ -223,12 +230,18 @@ class BaseApiHandler(ABC):
         
         # 获取总页数
         total_pages = 1
+        total_record = 'N/A'
         if isinstance(first_data, dict):
             total_pages_str = first_data.get('total_page')
             if total_pages_str:
                 total_pages = int(total_pages_str)
-        
-        self.log.info(f"{self.api_name} 总页数: {total_pages}, 总记录: {first_data.get('total_record', 'N/A')}")
+            total_record = first_data.get('total_record', 'N/A')
+        elif isinstance(first_data, list):
+            # API 直接返回列表，视为单页数据
+            total_pages = 1
+            total_record = len(first_data)
+
+        self.log.info(f"{self.api_name} 总页数: {total_pages}, 总记录: {total_record}")
         
         # 保存第一页
         parsed = self.parse_response(first_data)
@@ -261,7 +274,7 @@ class BaseApiHandler(ABC):
         
         def fetch_page(page_no):
             """爬取单页"""
-            time.sleep(random.uniform(1.0, 2.0))  # 增加延迟，避免被封
+            time.sleep(random.uniform(0.2, 0.5))  # 短延迟
             
             params = {
                 'goods_id': goods_id,
@@ -321,28 +334,41 @@ class BaseApiHandler(ABC):
             'raw_ids': raw_ids
         }
     
+    def _get_proxies(self):
+        """获取代理配置"""
+        try:
+            from config import get_config
+            proxy_url = get_config().PROXY_URL
+        except Exception:
+            import os
+            proxy_url = os.getenv('PROXY_URL', '')
+        if proxy_url:
+            return {'http': proxy_url, 'https': proxy_url}
+        return None
+
     def _request(self, params: Dict) -> Optional[Dict]:
         """发送 API 请求"""
         try:
             # 获取时间戳和签名
             ts = self.signer.get_timestamp_by_server()
             signer = self.signer.get_siger_by_params(params, ts)
-            
+
             # 构造请求头
             headers = self.signer.get_headers(
                 signer['header_sign'],
                 signer['timestamp'],
-                self.TOKEN
+                self._get_token()
             )
-            
+
             # 构造 URL 参数
             query_params = params.copy()
             query_params['sign'] = signer['url_sign']
             query_params['time'] = signer['timestamp']
-            
-            # 发送请求
+
+            # 发送请求（支持代理）
             url = f"{self.BASE_URL}{self.BASE_API}{self.api_path}"
-            response = requests.get(url, params=query_params, headers=headers, timeout=30)
+            proxies = self._get_proxies()
+            response = requests.get(url, params=query_params, headers=headers, timeout=30, proxies=proxies)
             result = response.json()
             
             # 检查响应

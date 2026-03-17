@@ -29,7 +29,10 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = get_token_from_header(request.headers)
-        
+        # 也支持从 URL 参数获取 token（用于 window.open 下载等场景）
+        if not token:
+            token = request.args.get('token')
+
         if not token:
             return jsonify({
                 'success': False,

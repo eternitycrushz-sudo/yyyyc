@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html class="dark" lang="zh-CN">
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
     <title>抖音电商热点数据可视化分析系统 - 登录</title>
     <link href="css/fonts.css" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -46,7 +47,7 @@
     <div class="relative flex min-h-screen w-full flex-col justify-center overflow-hidden py-6 sm:py-12">
         <!-- 背景 -->
         <div class="absolute inset-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2832&auto=format&fit=crop')] bg-cover bg-center opacity-10 pointer-events-none"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/95 to-background-dark/80 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background-light via-background-light/95 to-background-light/80 dark:from-background-dark dark:via-background-dark/95 dark:to-background-dark/80 pointer-events-none"></div>
         
         <div class="relative w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 flex-grow flex items-center">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 w-full overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#325e67]/30">
@@ -154,7 +155,7 @@
                                        type="checkbox"/>
                                 <span class="text-sm text-slate-600 dark:text-text-secondary group-hover:text-slate-900 dark:group-hover:text-white transition-colors select-none">记住我</span>
                             </label>
-                            <a class="text-sm font-medium text-primary hover:text-primary/80 transition-colors" href="#">忘记密码?</a>
+                            <a @click.prevent="showResetDialog = true" class="text-sm font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer">忘记密码?</a>
                         </div>
                         
                         <!-- 登录按钮 -->
@@ -174,6 +175,44 @@
                         </div>
                     </form>
                     
+                    <!-- 忘记密码弹窗 -->
+                    <div v-if="showResetDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="showResetDialog = false">
+                        <div class="w-full max-w-md mx-4 rounded-2xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#325e67]/30 shadow-2xl p-8">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white">重置密码</h3>
+                                <button @click="showResetDialog = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <form @submit.prevent="handleResetPassword" class="flex flex-col gap-4">
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-slate-700 dark:text-white text-sm font-medium">账号</span>
+                                    <input v-model="resetForm.username"
+                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                           placeholder="请输入要重置密码的用户名" type="text"/>
+                                </label>
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-slate-700 dark:text-white text-sm font-medium">新密码</span>
+                                    <input v-model="resetForm.newPassword"
+                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                           placeholder="请输入新密码（至少6位）" type="password"/>
+                                </label>
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-slate-700 dark:text-white text-sm font-medium">确认新密码</span>
+                                    <input v-model="resetForm.confirmPassword"
+                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                           placeholder="请再次输入新密码" type="password"/>
+                                </label>
+                                <button :disabled="resetLoading"
+                                        class="mt-2 flex w-full items-center justify-center rounded-lg bg-primary h-12 px-6 text-background-dark text-base font-bold hover:bg-[#0ebacb] active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(19,200,236,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        type="submit">
+                                    <span v-if="resetLoading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                                    {{ resetLoading ? '重置中...' : '重置密码' }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- 底部版权 -->
                     <div class="mt-auto pt-8 text-center lg:text-left">
                         <p class="text-xs text-slate-400 dark:text-slate-600">© 2024 Douyin E-commerce Analysis System. All rights reserved.</p>
@@ -187,7 +226,7 @@
 <script>
 const { createApp, ref, reactive, onMounted } = Vue
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = 'http://localhost:5001/api'
 
 createApp({
     setup() {
@@ -200,6 +239,13 @@ createApp({
         const loading = ref(false)
         const error = ref('')
         const showPassword = ref(false)
+        const showResetDialog = ref(false)
+        const resetLoading = ref(false)
+        const resetForm = reactive({
+            username: '',
+            newPassword: '',
+            confirmPassword: ''
+        })
         
         // 检查是否已登录
         onMounted(() => {
@@ -261,7 +307,7 @@ createApp({
                     
                     // 跳转到系统后台
                     setTimeout(() => {
-                        window.location.href = '/dashboard'
+                        window.location.href = 'index.html'
                     }, 1000)
                 } else {
                     Toast.error(result.message || '登录失败')
@@ -274,12 +320,57 @@ createApp({
             }
         }
         
+        const handleResetPassword = async () => {
+            if (!resetForm.username.trim()) {
+                Toast.warning('请输入用户名')
+                return
+            }
+            if (!resetForm.newPassword || resetForm.newPassword.length < 6) {
+                Toast.warning('新密码长度至少6位')
+                return
+            }
+            if (resetForm.newPassword !== resetForm.confirmPassword) {
+                Toast.warning('两次输入的密码不一致')
+                return
+            }
+
+            resetLoading.value = true
+            try {
+                const response = await fetch(`${API_BASE}/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: resetForm.username.trim(),
+                        new_password: resetForm.newPassword
+                    })
+                })
+                const result = await response.json()
+                if (result.success) {
+                    Toast.success(result.message)
+                    showResetDialog.value = false
+                    resetForm.username = ''
+                    resetForm.newPassword = ''
+                    resetForm.confirmPassword = ''
+                } else {
+                    Toast.error(result.message || '重置失败')
+                }
+            } catch (e) {
+                Toast.error('网络错误，请检查后端服务')
+            } finally {
+                resetLoading.value = false
+            }
+        }
+
         return {
             form,
             loading,
             error,
             showPassword,
-            handleLogin
+            showResetDialog,
+            resetLoading,
+            resetForm,
+            handleLogin,
+            handleResetPassword
         }
     }
 }).mount('#app')

@@ -235,13 +235,13 @@ class TaskManager:
                     """, (completed_steps, total_steps, progress, task_id))
                 else:
                     cursor.execute("""
-                        UPDATE crawler_task 
+                        UPDATE crawler_task
                         SET completed_steps = %s,
-                            progress = CASE WHEN total_steps > 0 
-                                THEN ROUND(completed_steps / total_steps * 100) 
+                            progress = CASE WHEN total_steps > 0
+                                THEN ROUND(%s / total_steps * 100)
                                 ELSE 0 END
                         WHERE task_id = %s
-                    """, (completed_steps, task_id))
+                    """, (completed_steps, completed_steps, task_id))
             conn.commit()
         finally:
             conn.close()

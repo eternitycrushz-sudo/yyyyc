@@ -51,8 +51,15 @@ class ListWorker(BaseWorker):
     next_queue = QUEUE_DETAIL
     
     # API 配置
-    TOKEN = "45114cedfddd64db6b0c5f0acf929487"
     SHOP_SEARCH_PATH = "/api/douke/search"
+
+    @classmethod
+    def _get_token(cls):
+        try:
+            from config import get_config
+            return get_config().API_TOKEN
+        except Exception:
+            return "7036afebb8e8c2449c74718738fa33bb"
     
     def __init__(self, db_config: Dict = None, **kwargs):
         """
@@ -64,7 +71,7 @@ class ListWorker(BaseWorker):
                     'host': 'localhost',
                     'port': 3306,
                     'user': 'root',
-                    'password': '123456',
+                    'password': 'Dy@analysis2024',
                     'database': 'dy_analysis_system'
                 }
             **kwargs: 传递给父类的参数（mq_host, mq_port）
@@ -76,60 +83,82 @@ class ListWorker(BaseWorker):
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': '123456',
+            'password': 'Dy@analysis2024',
             'database': 'dy_analysis_system'
         }
     
+    # 多种搜索类型，获取不同类型的商品
+    # search_type: 1=爆款推荐, 2=实时热销, 3=达人热推, 5=高佣好物, 8=潜力爆品, 11=综合推荐
+    SEARCH_TYPES = [
+        ('11', '综合推荐'),
+        ('1', '爆款推荐'),
+        ('2', '实时热销'),
+        ('5', '高佣好物'),
+        ('8', '潜力爆品'),
+        ('3', '达人热推'),
+    ]
+
     def crawl(self, message: Dict[str, Any]) -> List[Dict]:
         """
         爬取商品列表
-        
+
         原理：
         1. 从消息中获取页码范围
-        2. 逐页爬取数据
-        3. 返回所有商品数据
-        
+        2. 使用 6 种搜索类型逐页爬取，获取不同类型的商品
+        3. 按 product_id 去重后返回
+
         Args:
             message: 包含 start_page, end_page 的消息
-            
+
         Returns:
-            所有页的商品数据列表
+            所有页的商品数据列表（已去重）
         """
         start_page = message.get('start_page', 1)
         end_page = message.get('end_page', 1)
-        
-        self.log.info(f"开始爬取商品列表: 第{start_page}页 - 第{end_page}页")
-        
+
+        self.log.info(f"开始爬取商品列表: 第{start_page}页 - 第{end_page}页, 共{len(self.SEARCH_TYPES)}种搜索类型")
+
+        seen_ids = set()
         all_products = []
-        
-        for page in range(start_page, end_page + 1):
-            try:
-                # 随机延迟，避免被封
-                time.sleep(random.uniform(1, 1.5))
-                
-                # 爬取单页
-                result = self._fetch_page(page)
-                
-                if result and 'data' in result and result['data']:
-                    products = result['data']
-                    all_products.extend(products)
-                    self.log.info(f"第{page}页获取成功，{len(products)}条数据")
-                else:
-                    self.log.warning(f"第{page}页数据为空")
-                    # 如果遇到空页，可能已经到末尾了
-                    break
-                    
-            except Exception as e:
-                self.log.error(f"第{page}页爬取失败: {e}")
-                continue
-        
-        self.log.info(f"商品列表爬取完成，共{len(all_products)}条数据")
+
+        for search_type, type_name in self.SEARCH_TYPES:
+            self.log.info(f"--- 搜索类型: {type_name} (search_type={search_type}) ---")
+            empty_count = 0
+
+            for page in range(start_page, end_page + 1):
+                try:
+                    time.sleep(random.uniform(0.3, 0.6))
+
+                    result = self._fetch_page(page, search_type=search_type)
+
+                    if result and 'data' in result and result['data']:
+                        products = result['data']
+                        new_count = 0
+                        for p in products:
+                            pid = p.get('product_id') or p.get('id')
+                            if pid and pid not in seen_ids:
+                                seen_ids.add(pid)
+                                all_products.append(p)
+                                new_count += 1
+                        self.log.info(f"[{type_name}] 第{page}页: {len(products)}条, 新增{new_count}条")
+                        empty_count = 0
+                    else:
+                        self.log.warning(f"[{type_name}] 第{page}页数据为空")
+                        empty_count += 1
+                        if empty_count >= 2:
+                            break
+
+                except Exception as e:
+                    self.log.error(f"[{type_name}] 第{page}页爬取失败: {e}")
+                    continue
+
+        self.log.info(f"商品列表爬取完成，共{len(all_products)}条不重复数据")
         return all_products
     
-    def _fetch_page(self, page: int) -> Dict:
+    def _fetch_page(self, page: int, search_type: str = '11') -> Dict:
         """
-        爬取单页数据
-        
+        爬取单页数据（API 限制每页最多 10 条）
+
         原理：
         1. 构造请求参数
         2. 使用 ReduxSigner 生成签名
@@ -139,7 +168,7 @@ class ListWorker(BaseWorker):
             'page': str(page),
             'limit': '10',
             'sell_num_min': '1000',
-            'search_type': '11',
+            'search_type': search_type,
             'sort_type': '1',
             'source': '0',
             'platform': 'douyin'
@@ -155,7 +184,7 @@ class ListWorker(BaseWorker):
         headers = ReduxSigner.get_headers(
             signer['header_sign'], 
             signer['timestamp'], 
-            self.TOKEN
+            self._get_token()
         )
         
         # 构造 URL 参数
@@ -171,22 +200,72 @@ class ListWorker(BaseWorker):
     
     def clean(self, data: List[Dict]) -> List[Dict]:
         """
-        数据清洗（预留接口）
-        
-        TODO: 在这里实现数据清洗逻辑
-        - 字段类型转换
-        - 空值处理
-        - 数据校验
-        
-        Args:
-            data: 原始商品数据列表
-            
-        Returns:
-            清洗后的数据
+        数据清洗
+
+        清洗规则：
+        1. 过滤无效记录（无 product_id 或无标题）
+        2. 字段类型转换（价格转 float，数量转 int）
+        3. 空值填充默认值
+        4. 去除标题首尾空白和特殊字符
+        5. 价格异常值过滤（负数、超大值）
         """
-        # 预留接口，暂时直接返回
-        # 后续可以在这里添加清洗逻辑
-        return data
+        if not data:
+            return data
+
+        cleaned = []
+        for item in data:
+            # 过滤无效记录
+            pid = item.get('product_id') or item.get('id')
+            title = item.get('title', '')
+            if not pid or not title:
+                continue
+
+            # 清洗标题：去首尾空白
+            item['title'] = title.strip()
+
+            # 价格类型转换与校验
+            for field in ['price', 'coupon', 'coupon_price', 'cos_fee', 'kol_cos_fee']:
+                val = item.get(field)
+                if val is not None:
+                    try:
+                        val = float(val)
+                        if val < 0 or val > 999999:
+                            val = 0
+                        item[field] = val
+                    except (ValueError, TypeError):
+                        item[field] = 0
+
+            # 比例字段转换
+            for field in ['cos_ratio', 'kol_cos_ratio', 'subsidy_ratio', 'butie_rate']:
+                val = item.get(field)
+                if val is not None:
+                    try:
+                        item[field] = float(val)
+                    except (ValueError, TypeError):
+                        item[field] = 0
+
+            # 整数字段转换
+            for field in ['view_num', 'order_count', 'combined', 'kol_weekday']:
+                val = item.get(field)
+                if val is not None:
+                    try:
+                        item[field] = int(float(val))
+                    except (ValueError, TypeError):
+                        item[field] = 0
+
+            # 空值填充
+            item.setdefault('platform', 'douyin')
+            item.setdefault('shop_name', '')
+            item.setdefault('cover', '')
+            item.setdefault('status', 1)
+
+            cleaned.append(item)
+
+        removed = len(data) - len(cleaned)
+        if removed > 0:
+            self.log.info(f"数据清洗: 原始{len(data)}条, 过滤{removed}条, 保留{len(cleaned)}条")
+
+        return cleaned
     
     def save(self, data: List[Dict], message: Dict[str, Any]):
         """
@@ -208,7 +287,7 @@ class ListWorker(BaseWorker):
             return
         
         self.log.info(f"开始保存{len(data)}条商品数据到数据库")
-        self.log.info(f"数据库配置: {self.db_config}")
+        self.log.info(f"数据库配置: host={self.db_config.get('host')}, database={self.db_config.get('database')}")
         
         try:
             with DBCallback(**self.db_config) as db:
@@ -293,7 +372,7 @@ if __name__ == '__main__':
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': '123456',
+            'password': 'Dy@analysis2024',
             'database': 'dy_analysis_system'
         }
     )

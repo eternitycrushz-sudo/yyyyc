@@ -148,3 +148,16 @@ driver/
 *.json
 *.png
 douyin_cookies.json
+
+# IDE
+.idea/
+.vscode/
+
+# Virtual environments
+venv_mac/
+
+# Logs
+logs/
+
+# Gitee
+.gitee/

@@ -1,8 +1,9 @@
 ﻿<!DOCTYPE html>
-<html class="dark" lang="zh-CN">
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
     <title>抖音电商热点数据可视化分析系统 - 注册</title>
     <link href="css/fonts.css" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -79,6 +80,13 @@
         .btn-pulse:hover {
             animation: pulse-glow 2s ease-in-out infinite;
         }
+        /* 亮色模式覆盖 */
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        html:not(.dark) .from-white { --tw-gradient-from: #0d191b !important; }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased min-h-screen flex flex-col">
@@ -87,7 +95,7 @@
     <div class="relative flex min-h-screen w-full flex-col justify-center overflow-hidden py-6 sm:py-12">
         <!-- 背景 -->
         <div class="absolute inset-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2832&auto=format&fit=crop')] bg-cover bg-center opacity-10 pointer-events-none"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/95 to-background-dark/80 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background-light via-background-light/95 to-background-light/80 dark:from-background-dark dark:via-background-dark/95 dark:to-background-dark/80 pointer-events-none"></div>
         
         <div class="relative w-full max-w-md mx-auto px-4">
             <!-- 装饰性浮动元素 -->
@@ -229,7 +237,7 @@
 <script>
 const { createApp, ref, reactive } = Vue
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = 'http://localhost:5001/api'
 
 createApp({
     setup() {

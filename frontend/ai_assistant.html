@@ -1,8 +1,9 @@
 ﻿<!DOCTYPE html>
-<html class="dark" lang="zh-CN">
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
     <title>AI 智能助手 - 抖音电商分析系统</title>
     <link href="css/fonts.css" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -141,9 +142,16 @@
         }
         .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
         .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        /* 亮色模式覆盖 */
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
     </style>
 </head>
-<body class="bg-background-dark text-white">
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
 
 <div id="app" class="flex h-screen overflow-hidden">
     <!-- 侧边栏 -->
@@ -279,7 +287,7 @@
 <script>
 const { createApp, ref, onMounted, nextTick, computed } = Vue
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = 'http://localhost:5001/api'
 const SESSION_KEY = 'ai_session_id'
 
 const createSessionId = () => {
@@ -488,7 +496,7 @@ createApp({
                     },
                     body: JSON.stringify({
                         message: message,
-                        session_id: 'fullscreen_session_' + Date.now()
+                        session_id: sessionId.value
                     })
                 })
                 
@@ -531,7 +539,8 @@ createApp({
                 }
                 
                 scrollToBottom()
-                
+                sendSucceeded = true
+
             } catch (e) {
                 console.error('AI chat error:', e)
                 messages.value[aiMessageIndex].content = '抱歉，我遇到了一些问题。请稍后重试。'

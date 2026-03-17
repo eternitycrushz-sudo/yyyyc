@@ -52,7 +52,7 @@ class CleanWorker:
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': '123456',
+            'password': 'Dy@analysis2024',
             'database': 'dy_analysis_system'
         }
         
@@ -198,22 +198,12 @@ class CleanWorker:
         
         self.log.info(f"CleanWorker 启动，监听队列: {QUEUE_CLEAN}")
         
-        def callback(ch, method, properties, body):
-            import json
-            try:
-                message = json.loads(body)
-                self.log.info(f"收到清洗任务: {message}")
-                
-                result = self.handle_message(message)
-                self.log.info(f"清洗完成: {result}")
-                
-                ch.basic_ack(delivery_tag=method.delivery_tag)
-                
-            except Exception as e:
-                self.log.error(f"处理消息失败: {e}")
-                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-        
-        consume(QUEUE_CLEAN, callback)
+        def handler(message):
+            self.log.info(f"收到清洗任务: {message}")
+            result = self.handle_message(message)
+            self.log.info(f"清洗完成: {result}")
+
+        consume(QUEUE_CLEAN, handler)
 
 
 if __name__ == '__main__':
@@ -227,7 +217,7 @@ if __name__ == '__main__':
         'host': 'localhost',
         'port': 3306,
         'user': 'root',
-        'password': '123456',
+        'password': 'Dy@analysis2024',
         'database': 'dy_analysis_system'
     }
     

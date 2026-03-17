@@ -457,7 +457,7 @@ const aiAssistantComponent = {
         async loadSuggestions() {
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch('http://localhost:5000/api/ai/suggestions', {
+                const response = await fetch('http://localhost:5001/api/ai/suggestions', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 const result = await response.json()
@@ -472,7 +472,7 @@ const aiAssistantComponent = {
         async loadHistory() {
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch(`http://localhost:5000/api/ai/history?session_id=${this.sessionId}`, {
+                const response = await fetch(`http://localhost:5001/api/ai/history?session_id=${this.sessionId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 const result = await response.json()
@@ -511,7 +511,7 @@ const aiAssistantComponent = {
             
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch('http://localhost:5000/api/ai/chat', {
+                const response = await fetch('http://localhost:5001/api/ai/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

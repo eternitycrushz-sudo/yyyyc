@@ -17,13 +17,20 @@ class ShopCrawler:
     """
     ShopCrawler类用于爬取商品信息。
     """
-    TOKEN = "45114cedfddd64db6b0c5f0acf929487"
     SHOP_SEARCH_PATH = "/api/douke/search"
     SHOP_VIEW_PATH = "/api/douke/view"
 
+    @classmethod
+    def _get_token(cls):
+        """从统一配置获取 Token"""
+        try:
+            from config import get_config
+            return get_config().API_TOKEN
+        except Exception:
+            return "7036afebb8e8c2449c74718738fa33bb"
+
     def __init__(self, token: str = None):
-        # 设置业务路径和共性参数
-        self.TOKEN = token if token is not None else self.TOKEN
+        self.TOKEN = token if token is not None else self._get_token()
 
 
     @classmethod
@@ -45,7 +52,7 @@ class ShopCrawler:
             signer = ReduxSigner.get_siger_by_params(params, ts)
 
             # 构造 Header
-            headers = ReduxSigner.get_headers(signer['header_sign'], signer['timestamp'], '45114cedfddd64db6b0c5f0acf929487')
+            headers = ReduxSigner.get_headers(signer['header_sign'], signer['timestamp'], cls._get_token())
 
             # 构造 URL 参数
             query_params = params.copy()

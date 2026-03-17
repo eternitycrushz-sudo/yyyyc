@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>爬虫任务 - 抖音电商分析系统</title>
+    <link href="css/fonts.css?v=5" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
+        .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
+        [v-cloak] { display: none !important; }
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .text-white { color: #111827 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        body, * { font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
+
+<div id="app" class="flex h-screen" v-cloak>
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-white dark:bg-surface-dark border-r border-gray-200 dark:border-input-border flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">analytics</span>
+                </div>
+                <span class="font-bold text-lg">数据分析系统</span>
+            </div>
+        </div>
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
+            <a href="index.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">home</span>首页
+            </a>
+            <a href="dashboard.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">dashboard</span>数据仪表盘
+            </a>
+            <a href="prediction.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">trending_up</span>热点预测
+            </a>
+            <a href="compare.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">compare_arrows</span>商品对比
+            </a>
+            <a href="favorites.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">favorite</span>我的收藏
+            </a>
+            <a href="ai_assistant.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">smart_toy</span>AI 智能助手
+            </a>
+            <a href="crawler.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary">
+                <span class="material-symbols-outlined text-xl">bug_report</span>爬虫任务
+            </a>
+            <a href="settings.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">settings</span>系统设置
+            </a>
+        </nav>
+        <div class="p-4 border-t border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ user?.nickname || user?.username }}</div>
+                    <div class="text-xs text-text-secondary">{{ user?.roles?.[0]?.name || '用户' }}</div>
+                </div>
+                <button @click="handleLogout" class="p-2 hover:bg-input-bg rounded-lg" title="退出登录">
+                    <span class="material-symbols-outlined text-text-secondary hover:text-red-400">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-input-border flex items-center justify-between px-6">
+            <h1 class="text-xl font-semibold">爬虫任务管理</h1>
+            <span class="text-sm text-text-secondary">{{ currentTime }}</span>
+        </header>
+
+        <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-background-dark">
+
+            <!-- 爬虫状态卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-text-secondary text-sm">爬虫状态</span>
+                        <span class="material-symbols-outlined text-2xl" :class="crawlerStatus.running ? 'text-green-400' : 'text-gray-400'">
+                            {{ crawlerStatus.running ? 'play_circle' : 'pause_circle' }}
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold" :class="crawlerStatus.running ? 'text-green-400' : 'text-text-secondary'">
+                        {{ crawlerStatus.running ? '运行中' : '已停止' }}
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-text-secondary text-sm">已发送任务</span>
+                        <span class="material-symbols-outlined text-2xl text-primary">task</span>
+                    </div>
+                    <div class="text-2xl font-bold">{{ taskHistory.length }}</div>
+                </div>
+                <div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-text-secondary text-sm">RabbitMQ</span>
+                        <span class="material-symbols-outlined text-2xl" :class="mqConnected ? 'text-green-400' : 'text-red-400'">
+                            {{ mqConnected ? 'cloud_done' : 'cloud_off' }}
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold" :class="mqConnected ? 'text-green-400' : 'text-red-400'">
+                        {{ mqConnected ? '已连接' : '未连接' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 任务操作区 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                <!-- 商品列表爬取 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">list_alt</span>
+                        商品列表爬取
+                    </h3>
+                    <p class="text-text-secondary text-sm mb-4">从抖音电商平台爬取商品列表数据，支持按页码范围爬取。</p>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="text-xs text-text-secondary mb-1 block">起始页</label>
+                            <input v-model.number="listForm.startPage" type="number" min="1"
+                                   class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary outline-none"/>
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs text-text-secondary mb-1 block">结束页</label>
+                            <input v-model.number="listForm.endPage" type="number" min="1"
+                                   class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary outline-none"/>
+                        </div>
+                    </div>
+                    <button @click="startListCrawler" :disabled="listLoading"
+                            class="w-full py-2.5 bg-primary text-background-dark rounded-lg font-medium text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
+                        <span v-if="listLoading" class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                        <span>{{ listLoading ? '发送中...' : '启动列表爬取' }}</span>
+                    </button>
+                </div>
+
+                <!-- 商品详情爬取 -->
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">description</span>
+                        商品详情爬取
+                    </h3>
+                    <p class="text-text-secondary text-sm mb-4">爬取指定商品的详细信息，包括销量、佣金、达人数据等。</p>
+                    <div class="mb-4">
+                        <label class="text-xs text-text-secondary mb-1 block">商品 ID</label>
+                        <input v-model="detailForm.productId" type="text" placeholder="输入商品 Product ID"
+                               class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary outline-none"/>
+                    </div>
+                    <div class="flex gap-3 mb-3">
+                        <button @click="startDetailCrawler" :disabled="detailLoading"
+                                class="flex-1 py-2.5 bg-primary text-background-dark rounded-lg font-medium text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
+                            <span v-if="detailLoading" class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                            <span>{{ detailLoading ? '发送中...' : '爬取详情' }}</span>
+                        </button>
+                        <button @click="startAnalysis" :disabled="analysisLoading"
+                                class="flex-1 py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg font-medium text-sm hover:bg-emerald-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
+                            <span v-if="analysisLoading" class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                            <span>{{ analysisLoading ? '发送中...' : '数据分析' }}</span>
+                        </button>
+                    </div>
+                    <button @click="startBatchDetail" :disabled="batchDetailLoading"
+                            class="w-full py-2.5 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-lg font-medium text-sm hover:bg-orange-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
+                        <span v-if="batchDetailLoading" class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                        <span>{{ batchDetailLoading ? '发送中...' : '一键爬取所有商品详情+分析' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 代理配置 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border mb-6">
+                <h3 class="text-lg font-semibold flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-primary">vpn_lock</span>
+                    代理配置
+                    <span class="text-xs font-normal text-text-secondary ml-2">IP被封时通过代理访问目标网站</span>
+                </h3>
+                <div class="flex gap-3 items-end">
+                    <div class="flex-1">
+                        <label class="block text-xs text-text-secondary mb-1">代理地址</label>
+                        <input v-model="proxyUrl" type="text"
+                               placeholder="http://user:pass@host:port 或 socks5://host:port"
+                               class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg text-sm focus:outline-none focus:border-primary" />
+                    </div>
+                    <button @click="testProxy" :disabled="proxyTesting"
+                            class="px-4 py-2 bg-input-bg border border-input-border rounded-lg text-sm hover:border-primary disabled:opacity-50 flex items-center gap-1 whitespace-nowrap">
+                        <span v-if="proxyTesting" class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                        <span class="material-symbols-outlined text-base" v-else>speed</span>
+                        {{ proxyTesting ? '测试中...' : '测试连接' }}
+                    </button>
+                    <button @click="saveProxy"
+                            class="px-4 py-2 bg-primary text-background-dark rounded-lg text-sm font-medium hover:bg-primary/90 flex items-center gap-1 whitespace-nowrap">
+                        <span class="material-symbols-outlined text-base">save</span>
+                        保存
+                    </button>
+                    <button v-if="proxyUrl" @click="proxyUrl=''; saveProxy()"
+                            class="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm hover:bg-red-500/30 flex items-center gap-1 whitespace-nowrap">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                        清除
+                    </button>
+                </div>
+                <div v-if="proxyStatus" class="mt-3 text-sm" :class="proxyStatusOk ? 'text-emerald-400' : 'text-red-400'">
+                    {{ proxyStatus }}
+                </div>
+            </div>
+
+            <!-- 数据清洗 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">cleaning_services</span>
+                        数据清洗
+                    </h3>
+                    <div class="flex gap-3">
+                        <button @click="refreshCleanStatus" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm hover:border-primary flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">refresh</span>刷新状态
+                        </button>
+                        <button @click="cleanAllData" :disabled="cleanLoading"
+                                class="px-4 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-sm hover:bg-amber-500/30 disabled:opacity-50 flex items-center gap-1">
+                            <span v-if="cleanLoading" class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                            <span>{{ cleanLoading ? '清洗中...' : '一键清洗全部' }}</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-input-border text-text-secondary">
+                                <th class="text-left py-3 px-4">数据表</th>
+                                <th class="text-right py-3 px-4">总记录</th>
+                                <th class="text-right py-3 px-4">已清洗</th>
+                                <th class="text-right py-3 px-4">未清洗</th>
+                                <th class="text-right py-3 px-4">状态</th>
+                                <th class="text-right py-3 px-4">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(info, table) in cleanStatus" :key="table" class="border-b border-input-border/50 hover:bg-input-bg/50">
+                                <td class="py-3 px-4 font-mono text-xs">{{ table }}</td>
+                                <td class="py-3 px-4 text-right">{{ info.error ? '-' : info.total }}</td>
+                                <td class="py-3 px-4 text-right text-green-400">{{ info.error ? '-' : info.cleaned }}</td>
+                                <td class="py-3 px-4 text-right" :class="info.uncleaned > 0 ? 'text-amber-400' : 'text-text-secondary'">
+                                    {{ info.error ? '-' : info.uncleaned }}
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <span v-if="info.error" class="text-xs text-red-400">{{ info.error }}</span>
+                                    <span v-else-if="info.uncleaned === 0" class="text-xs text-green-400">已完成</span>
+                                    <span v-else class="text-xs text-amber-400">待清洗</span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <button v-if="!info.error && info.uncleaned > 0"
+                                            @click="cleanSingleHandler(table)"
+                                            :disabled="cleaningTable === table"
+                                            class="px-3 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-xs hover:bg-primary/30 disabled:opacity-50 inline-flex items-center gap-1">
+                                        <span v-if="cleaningTable === table" class="material-symbols-outlined text-xs animate-spin">progress_activity</span>
+                                        {{ cleaningTable === table ? '清洗中' : '清洗' }}
+                                    </button>
+                                    <span v-else-if="!info.error" class="text-xs text-text-secondary">-</span>
+                                </td>
+                            </tr>
+                            <tr v-if="Object.keys(cleanStatus).length === 0">
+                                <td colspan="6" class="py-8 text-center text-text-secondary">点击"刷新状态"查看清洗情况</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 任务历史 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">history</span>
+                        任务历史
+                    </h3>
+                    <div class="flex gap-2">
+                        <button @click="loadDbTaskLogs" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm hover:border-primary flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">refresh</span>刷新
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-input-border text-text-secondary">
+                                <th class="text-left py-3 px-4">任务 ID</th>
+                                <th class="text-left py-3 px-4">类型</th>
+                                <th class="text-left py-3 px-4">参数</th>
+                                <th class="text-left py-3 px-4">发送时间</th>
+                                <th class="text-left py-3 px-4">发送状态</th>
+                                <th class="text-left py-3 px-4">执行状态</th>
+                                <th class="text-left py-3 px-4">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="task in taskHistory" :key="task.id" class="border-b border-input-border/50 hover:bg-input-bg/50">
+                                <td class="py-3 px-4 font-mono text-xs">{{ task.id }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded text-xs"
+                                          :class="{
+                                              'bg-blue-500/20 text-blue-400': task.type === 'list',
+                                              'bg-purple-500/20 text-purple-400': task.type === 'detail',
+                                              'bg-emerald-500/20 text-emerald-400': task.type === 'analysis'
+                                          }">
+                                        {{ {list: '列表爬取', detail: '详情爬取', analysis: '数据分析'}[task.type] }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-text-secondary text-xs">{{ task.params }}</td>
+                                <td class="py-3 px-4 text-text-secondary text-xs">{{ task.time }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded text-xs" :class="task.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'">
+                                        {{ task.success ? '已发送' : '发送失败' }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span v-if="task.execStatus === 'completed'" class="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">已完成</span>
+                                    <span v-else-if="task.execStatus === 'running'" class="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 flex items-center gap-1 w-fit">
+                                        <span class="material-symbols-outlined text-xs animate-spin">progress_activity</span>
+                                        执行中 {{ task.execProgress ? task.execProgress + '%' : '' }}
+                                    </span>
+                                    <span v-else-if="task.execStatus === 'failed'" class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400" :title="task.execError">执行失败</span>
+                                    <span v-else-if="task.execStatus === 'pending'" class="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">等待中</span>
+                                    <span v-else class="px-2 py-0.5 rounded text-xs bg-gray-500/20 text-text-secondary">待消费</span>
+                                    <div v-if="task.result" class="text-xs text-text-secondary mt-1 truncate max-w-[150px]" :title="task.result">{{ task.result }}</div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <button @click="showTaskDetail(task.id)" class="text-xs text-primary hover:underline">详情</button>
+                                </td>
+                            </tr>
+                            <tr v-if="taskHistory.length === 0">
+                                <td colspan="7" class="py-8 text-center text-text-secondary">暂无任务记录</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 任务详情弹窗 -->
+            <div v-if="detailModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="detailModal.visible = false">
+                <div class="bg-surface-dark rounded-2xl border border-input-border w-[700px] max-h-[80vh] flex flex-col">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-input-border">
+                        <h3 class="text-lg font-semibold">任务执行详情</h3>
+                        <button @click="detailModal.visible = false" class="p-1 hover:bg-input-bg rounded-lg">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-auto p-6">
+                        <div v-if="detailModal.loading" class="text-center py-10 text-text-secondary">
+                            <span class="material-symbols-outlined text-3xl animate-spin">progress_activity</span>
+                            <p class="mt-2">加载中...</p>
+                        </div>
+                        <template v-else>
+                            <!-- 主任务信息 -->
+                            <div v-if="detailModal.task" class="mb-6">
+                                <h4 class="text-sm font-semibold text-text-secondary mb-3">任务概要</h4>
+                                <div class="grid grid-cols-2 gap-3 text-sm">
+                                    <div class="bg-input-bg rounded-lg p-3">
+                                        <div class="text-text-secondary text-xs mb-1">任务ID</div>
+                                        <div class="font-mono text-xs">{{ detailModal.task.task_id }}</div>
+                                    </div>
+                                    <div class="bg-input-bg rounded-lg p-3">
+                                        <div class="text-text-secondary text-xs mb-1">状态</div>
+                                        <div :class="{
+                                            'text-green-400': detailModal.task.status === 'completed',
+                                            'text-blue-400': detailModal.task.status === 'running',
+                                            'text-red-400': detailModal.task.status === 'failed',
+                                            'text-yellow-400': detailModal.task.status === 'pending'
+                                        }">{{ {completed:'已完成', running:'执行中', failed:'失败', pending:'等待中'}[detailModal.task.status] || detailModal.task.status }}</div>
+                                    </div>
+                                    <div class="bg-input-bg rounded-lg p-3">
+                                        <div class="text-text-secondary text-xs mb-1">进度</div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1 h-2 bg-background-dark rounded-full overflow-hidden">
+                                                <div class="h-full bg-primary rounded-full transition-all" :style="{width: (detailModal.task.progress || 0) + '%'}"></div>
+                                            </div>
+                                            <span class="text-xs">{{ detailModal.task.progress || 0 }}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-input-bg rounded-lg p-3">
+                                        <div class="text-text-secondary text-xs mb-1">创建人</div>
+                                        <div>{{ detailModal.task.created_by || '-' }}</div>
+                                    </div>
+                                    <div v-if="detailModal.task.started_at" class="bg-input-bg rounded-lg p-3">
+                                        <div class="text-text-secondary text-xs mb-1">开始时间</div>
+                                        <div class="text-xs">{{ detailModal.task.started_at }}</div>
+                                    </div>
+                                    <div v-if="detailModal.task.completed_at" class="bg-input-bg rounded-lg p-3">
+                                        <div class="text-text-secondary text-xs mb-1">完成时间</div>
+                                        <div class="text-xs">{{ detailModal.task.completed_at }}</div>
+                                    </div>
+                                </div>
+                                <div v-if="detailModal.task.error_msg" class="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+                                    {{ detailModal.task.error_msg }}
+                                </div>
+                            </div>
+                            <div v-else class="mb-6 text-center py-4 text-text-secondary text-sm">
+                                Worker 尚未开始处理此任务（任务可能还在队列中等待消费）
+                            </div>
+
+                            <!-- 子步骤 -->
+                            <div v-if="detailModal.details.length > 0">
+                                <h4 class="text-sm font-semibold text-text-secondary mb-3">执行步骤 ({{ detailModal.details.length }})</h4>
+                                <div class="space-y-2">
+                                    <div v-for="step in detailModal.details" :key="step.id"
+                                         class="flex items-center gap-3 bg-input-bg rounded-lg p-3 text-sm">
+                                        <span class="material-symbols-outlined text-lg"
+                                              :class="{
+                                                  'text-green-400': step.status === 'completed',
+                                                  'text-red-400': step.status === 'failed',
+                                                  'text-yellow-400': step.status === 'pending',
+                                                  'text-blue-400': step.status === 'running'
+                                              }">
+                                            {{ step.status === 'completed' ? 'check_circle' : step.status === 'failed' ? 'cancel' : 'radio_button_unchecked' }}
+                                        </span>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-medium text-xs">{{ step.step_name }}</div>
+                                            <div v-if="step.result" class="text-text-secondary text-xs mt-0.5 truncate">
+                                                {{ typeof step.result === 'string' ? step.result : JSON.stringify(step.result) }}
+                                            </div>
+                                            <div v-if="step.error_msg" class="text-red-400 text-xs mt-0.5">{{ step.error_msg }}</div>
+                                        </div>
+                                        <span class="text-xs text-text-secondary shrink-0">{{ step.status === 'completed' ? '完成' : step.status === 'failed' ? '失败' : '等待' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+<script>
+const API_BASE = 'http://localhost:5001/api'
+
+const { createApp, ref, reactive, onMounted } = Vue
+
+createApp({
+    setup() {
+        const user = ref(null)
+        const currentTime = ref('')
+        const mqConnected = ref(false)
+
+        const crawlerStatus = reactive({ running: false, total_pages: 0, current_page: 0 })
+
+        const listForm = reactive({ startPage: 1, endPage: 5 })
+        const detailForm = reactive({ productId: '' })
+
+        const listLoading = ref(false)
+        const detailLoading = ref(false)
+        const analysisLoading = ref(false)
+        const batchDetailLoading = ref(false)
+        const cleanLoading = ref(false)
+
+        const taskHistory = ref([])
+        const cleanStatus = ref({})
+        const cleaningTable = ref('')
+        const detailModal = reactive({ visible: false, loading: false, task: null, details: [] })
+
+        // 代理配置
+        const proxyUrl = ref('')
+        const proxyTesting = ref(false)
+        const proxyStatus = ref('')
+        const proxyStatusOk = ref(false)
+
+        function getToken() {
+            return localStorage.getItem('token')
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = getToken()
+            if (!token) { window.location.href = 'login.html'; return }
+            const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
+            try {
+                const res = await fetch(`${API_BASE}${url}`, { ...options, headers })
+                return await res.json()
+            } catch (e) {
+                return { success: false, message: '网络错误: ' + e.message }
+            }
+        }
+
+        function addTask(type, params, taskId, success, message) {
+            taskHistory.value.unshift({
+                id: taskId || '-',
+                type,
+                params,
+                time: new Date().toLocaleTimeString(),
+                success,
+                message
+            })
+        }
+
+        async function startListCrawler() {
+            listLoading.value = true
+            const res = await apiFetch('/mq/start_list_crawler', {
+                method: 'POST',
+                body: JSON.stringify({ start_page: listForm.startPage, end_page: listForm.endPage })
+            })
+            listLoading.value = false
+            addTask('list', `第${listForm.startPage}-${listForm.endPage}页`, res.data?.task_id, res.success, res.message)
+            if (res.success) {
+                window.Toast?.success(res.message || '列表爬取任务已发送')
+            } else {
+                window.Toast?.error(res.message || '发送失败')
+            }
+        }
+
+        async function startDetailCrawler() {
+            if (!detailForm.productId) { window.Toast?.error('请输入商品 ID'); return }
+            detailLoading.value = true
+            const res = await apiFetch('/mq/start_detail_crawler', {
+                method: 'POST',
+                body: JSON.stringify({ product_id: detailForm.productId })
+            })
+            detailLoading.value = false
+            addTask('detail', `ID: ${detailForm.productId}`, res.data?.task_id, res.success, res.message)
+            if (res.success) {
+                window.Toast?.success(res.message || '详情爬取任务已发送')
+            } else {
+                window.Toast?.error(res.message || '发送失败')
+            }
+        }
+
+        async function startAnalysis() {
+            if (!detailForm.productId) { window.Toast?.error('请输入商品 ID'); return }
+            analysisLoading.value = true
+            const res = await apiFetch('/mq/start_analysis', {
+                method: 'POST',
+                body: JSON.stringify({ goods_id: detailForm.productId })
+            })
+            analysisLoading.value = false
+            addTask('analysis', `ID: ${detailForm.productId}`, res.data?.task_id, res.success, res.message)
+            if (res.success) {
+                window.Toast?.success(res.message || '分析任务已发送')
+            } else {
+                window.Toast?.error(res.message || '发送失败')
+            }
+        }
+
+        async function startBatchDetail() {
+            batchDetailLoading.value = true
+            const res = await apiFetch('/mq/start_batch_detail', {
+                method: 'POST'
+            })
+            batchDetailLoading.value = false
+            addTask('batch_detail', `全部商品`, res.data?.task_id, res.success, res.message)
+            if (res.success) {
+                window.Toast?.success(res.message || '批量任务已发送')
+            } else {
+                window.Toast?.error(res.message || '发送失败')
+            }
+        }
+
+        // ===== 代理相关 =====
+        async function loadProxy() {
+            const res = await apiFetch('/crawler/proxy')
+            if (res.success) {
+                proxyUrl.value = res.data?.proxy_url || ''
+            }
+        }
+
+        async function saveProxy() {
+            const res = await apiFetch('/crawler/proxy', {
+                method: 'POST',
+                body: JSON.stringify({ proxy_url: proxyUrl.value })
+            })
+            if (res.success) {
+                window.Toast?.success(res.message)
+                proxyStatus.value = ''
+            } else {
+                window.Toast?.error(res.message || '保存失败')
+            }
+        }
+
+        async function testProxy() {
+            if (!proxyUrl.value) {
+                window.Toast?.error('请先输入代理地址')
+                return
+            }
+            proxyTesting.value = true
+            proxyStatus.value = '正在测试...'
+            const res = await apiFetch('/crawler/proxy/test', {
+                method: 'POST',
+                body: JSON.stringify({ proxy_url: proxyUrl.value })
+            })
+            proxyTesting.value = false
+            proxyStatusOk.value = res.success
+            proxyStatus.value = res.message || (res.success ? '连接成功' : '连接失败')
+        }
+
+        async function refreshCleanStatus() {
+            const res = await apiFetch('/crawler/clean/status')
+            if (res.success) {
+                cleanStatus.value = res.data
+            } else {
+                window.Toast?.error(res.message || '获取清洗状态失败')
+            }
+        }
+
+        async function cleanAllData() {
+            cleanLoading.value = true
+            const res = await apiFetch('/crawler/clean/all', {
+                method: 'POST',
+                body: JSON.stringify({ batch_size: 200 })
+            })
+            cleanLoading.value = false
+            if (res.success) {
+                window.Toast?.success(res.message || '清洗完成')
+                refreshCleanStatus()
+            } else {
+                window.Toast?.error(res.message || '清洗失败')
+            }
+        }
+
+        async function cleanSingleHandler(tableName) {
+            cleaningTable.value = tableName
+            const res = await apiFetch(`/crawler/clean/table/${tableName}`, {
+                method: 'POST',
+                body: JSON.stringify({ batch_size: 200 })
+            })
+            cleaningTable.value = ''
+            if (res.success) {
+                window.Toast?.success(res.message || `${tableName} 清洗完成`)
+                refreshCleanStatus()
+            } else {
+                window.Toast?.error(res.message || '清洗失败')
+            }
+        }
+
+        async function fetchCrawlerStatus() {
+            const res = await apiFetch('/crawler/status')
+            if (res.success && res.data) {
+                Object.assign(crawlerStatus, res.data)
+            }
+        }
+
+        async function checkMQ() {
+            try {
+                const res = await apiFetch('/mq/start_list_crawler', { method: 'OPTIONS' })
+                mqConnected.value = true
+            } catch {
+                mqConnected.value = false
+            }
+        }
+
+        async function loadDbTaskLogs() {
+            const res = await apiFetch('/mq/task_logs?page_size=50')
+            if (res.code === 0 && res.data?.list) {
+                const dbTasks = res.data.list.map(t => {
+                    let params = ''
+                    try {
+                        const p = JSON.parse(t.params)
+                        params = p.start_page ? `第${p.start_page}-${p.end_page}页` : `ID: ${p.product_id || p.goods_id || ''}`
+                    } catch(e) {}
+                    // 优先用 exec_status（来自 crawler_task 表），其次用 status（来自 crawler_task_log 表）
+                    const rawStatus = t.status || 'sent'
+                    const execStatus = t.exec_status || (rawStatus !== 'sent' ? rawStatus : null)
+                    return {
+                        id: t.task_id,
+                        type: t.task_type,
+                        params,
+                        time: t.created_at,
+                        success: rawStatus !== 'failed',
+                        execStatus: execStatus,
+                        execProgress: t.exec_progress || 0,
+                        execError: t.exec_error || null,
+                        result: t.result || ''
+                    }
+                })
+                taskHistory.value = dbTasks
+            }
+        }
+
+        async function showTaskDetail(taskId) {
+            detailModal.visible = true
+            detailModal.loading = true
+            detailModal.task = null
+            detailModal.details = []
+            const res = await apiFetch(`/mq/task_detail/${taskId}`)
+            detailModal.loading = false
+            if (res.code === 0 && res.data) {
+                detailModal.task = res.data.task
+                detailModal.details = res.data.details || []
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = 'login.html'
+        }
+
+        function updateTime() {
+            currentTime.value = new Date().toLocaleString('zh-CN')
+        }
+
+        onMounted(() => {
+            const token = getToken()
+            if (!token) { window.location.href = 'login.html'; return }
+            const savedUser = localStorage.getItem('user')
+            if (savedUser) user.value = JSON.parse(savedUser)
+
+            updateTime()
+            setInterval(updateTime, 1000)
+
+            fetchCrawlerStatus()
+            refreshCleanStatus()
+            loadDbTaskLogs()
+            loadProxy()
+            mqConnected.value = true
+        })
+
+        return {
+            user, currentTime, mqConnected, crawlerStatus,
+            listForm, detailForm,
+            listLoading, detailLoading, analysisLoading, batchDetailLoading, cleanLoading,
+            taskHistory, cleanStatus, cleaningTable, detailModal,
+            proxyUrl, proxyTesting, proxyStatus, proxyStatusOk,
+            startListCrawler, startDetailCrawler, startAnalysis, startBatchDetail,
+            refreshCleanStatus, cleanAllData, cleanSingleHandler, loadDbTaskLogs, showTaskDetail,
+            saveProxy, testProxy,
+            handleLogout
+        }
+    }
+}).mount('#app')
+</script>
+</body>
+</html>

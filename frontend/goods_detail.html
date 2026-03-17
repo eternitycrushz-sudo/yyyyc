@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
     <title>商品详情 - 抖音电商热点分析系统</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link href="css/fonts.css" rel="stylesheet"/>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -61,11 +63,12 @@
                 <span v-if="isDark" class="material-symbols-outlined text-yellow-400">light_mode</span>
                 <span v-else class="material-symbols-outlined">dark_mode</span>
             </button>
-            <button class="flex items-center gap-2 px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors border border-primary/30">
-                <span class="material-symbols-outlined text-sm">favorite_border</span>
-                <span class="font-medium">收藏</span>
+            <button @click="toggleFavorite" class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border"
+                    :class="isFavorited ? 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30' : 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30'">
+                <span class="material-symbols-outlined text-sm">{{ isFavorited ? 'favorite' : 'favorite_border' }}</span>
+                <span class="font-medium">{{ isFavorited ? '已收藏' : '收藏' }}</span>
             </button>
-            <button class="flex items-center gap-2 px-4 py-2 bg-[#e7f1f3] dark:bg-[#1f3a3e] rounded-lg hover:opacity-90 transition-opacity">
+            <button @click="shareGoods" class="flex items-center gap-2 px-4 py-2 bg-[#e7f1f3] dark:bg-[#1f3a3e] rounded-lg hover:opacity-90 transition-opacity">
                 <span class="material-symbols-outlined text-sm">share</span>
                 <span class="font-medium">分享</span>
             </button>
@@ -183,7 +186,7 @@
                         <span class="material-symbols-outlined text-lg">open_in_new</span>
                         <span>查看原商品</span>
                     </a>
-                    <button class="px-5 py-3 bg-[#e7f1f3] dark:bg-[#1f3a3e] rounded-lg hover:opacity-90 transition-opacity">
+                    <button @click="downloadReport" class="px-5 py-3 bg-[#e7f1f3] dark:bg-[#1f3a3e] rounded-lg hover:opacity-90 transition-opacity" title="下载商品分析报告">
                         <span class="material-symbols-outlined">download</span>
                     </button>
                 </div>
@@ -363,6 +366,7 @@ createApp({
         const goods = ref(null)
         const activeTab = ref('trend')
         const isDark = ref(false)
+        const isFavorited = ref(false)
         
         // 监听标签切换，重绘图表
         watch(activeTab, (newTab) => {
@@ -479,7 +483,7 @@ createApp({
                     return
                 }
                 
-                const apiUrl = `http://localhost:5000/api/goods/detail/${productId}`
+                const apiUrl = `http://localhost:5001/api/goods/detail/${productId}`
                 console.log('请求URL:', apiUrl)
                 
                 const response = await fetch(apiUrl, {
@@ -524,6 +528,9 @@ createApp({
                     document.title = `${goods.value.title} - 商品详情`
                     console.log('✓ 商品详情加载成功')
                     
+                    // 检查收藏状态
+                    checkFavorite(productId)
+
                     // 延迟触发图表数据加载，确保图表已初始化
                     setTimeout(() => {
                         console.log('🎯 触发图表数据加载事件')
@@ -543,6 +550,128 @@ createApp({
             }
         }
         
+        // ===== 收藏功能 =====
+        const checkFavorite = async (productId) => {
+            try {
+                const token = localStorage.getItem('token')
+                const res = await fetch(`http://localhost:5001/api/favorites/check?product_id=${productId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                if (data.code === 0) isFavorited.value = data.data.is_favorited
+            } catch (e) { /* ignore */ }
+        }
+
+        const toggleFavorite = async () => {
+            const productId = goods.value?.product_id
+            if (!productId) return
+            const token = localStorage.getItem('token')
+            const url = isFavorited.value
+                ? 'http://localhost:5001/api/favorites/remove'
+                : 'http://localhost:5001/api/favorites/add'
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: productId })
+                })
+                const data = await res.json()
+                if (data.code === 0) {
+                    isFavorited.value = !isFavorited.value
+                    window.Toast?.success(isFavorited.value ? '已收藏' : '已取消收藏')
+                } else {
+                    window.Toast?.error(data.msg || '操作失败')
+                }
+            } catch (e) {
+                window.Toast?.error('网络错误')
+            }
+        }
+
+        // ===== 分享功能 =====
+        const shareGoods = async () => {
+            const g = goods.value
+            if (!g) return
+            const shareData = {
+                title: g.title,
+                text: `${g.title} - 价格 ¥${g.price}`,
+                url: window.location.href
+            }
+            // 优先使用浏览器原生分享
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData)
+                    return
+                } catch (e) { /* 用户取消或不支持 */ }
+            }
+            // 回退：复制链接到剪贴板
+            try {
+                await navigator.clipboard.writeText(window.location.href)
+                window.Toast?.success('链接已复制到剪贴板')
+            } catch (e) {
+                // 兜底方案
+                const input = document.createElement('input')
+                input.value = window.location.href
+                document.body.appendChild(input)
+                input.select()
+                document.execCommand('copy')
+                document.body.removeChild(input)
+                window.Toast?.success('链接已复制到剪贴板')
+            }
+        }
+
+        // ===== 下载报告 =====
+        const downloadReport = () => {
+            const g = goods.value
+            if (!g) return
+
+            // 收集页面上的分析数据
+            const now = new Date().toLocaleString('zh-CN')
+            let csv = '\uFEFF' // BOM for Excel UTF-8
+            csv += '商品分析报告\n'
+            csv += `导出时间,${now}\n\n`
+
+            // 基本信息
+            csv += '【基本信息】\n'
+            csv += `商品名称,${g.title}\n`
+            csv += `商品ID,${g.product_id}\n`
+            csv += `价格,¥${g.price}\n`
+            csv += `佣金比例,${g.cos_ratio}%\n`
+            csv += `预估佣金,¥${g.cos_fee}\n`
+            csv += `店铺名称,${g.shop_name || '-'}\n`
+            csv += `总销量,${(g.sales || 0).toLocaleString()}\n`
+            csv += `浏览量,${(g.view_num || 0).toLocaleString()}\n`
+            csv += `带货达人,${(g.kol_num || 0).toLocaleString()}\n`
+            csv += `商品链接,${g.url || '-'}\n\n`
+
+            // 尝试从图表获取趋势数据
+            const trendChart = document.getElementById('salesTrendChart')
+            if (trendChart && trendChart.__chartInstance) {
+                const opt = trendChart.__chartInstance.getOption()
+                if (opt && opt.xAxis && opt.xAxis[0] && opt.series) {
+                    csv += '【销量趋势】\n'
+                    csv += '日期,销量\n'
+                    const dates = opt.xAxis[0].data || []
+                    const values = opt.series[0]?.data || []
+                    for (let i = 0; i < dates.length; i++) {
+                        csv += `${dates[i]},${values[i] || 0}\n`
+                    }
+                    csv += '\n'
+                }
+            }
+
+            // 下载文件
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `商品报告_${g.product_id}_${new Date().toISOString().slice(0,10)}.csv`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            window.Toast?.success('报告已下载')
+        }
+
         // 返回上一页
         const goBack = () => {
             if (window.history.length > 1) {
@@ -558,7 +687,11 @@ createApp({
             goods,
             activeTab,
             isDark,
+            isFavorited,
             toggleTheme,
+            toggleFavorite,
+            shareGoods,
+            downloadReport,
             goBack
         }
     }
@@ -1011,7 +1144,7 @@ createAIApp({
         async loadHistory() {
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch(`http://localhost:5000/api/ai/history?session_id=${this.sessionId}`, {
+                const response = await fetch(`http://localhost:5001/api/ai/history?session_id=${this.sessionId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 const result = await response.json()
@@ -1072,7 +1205,7 @@ createAIApp({
                     requestBody.product_id = productId
                 }
                 
-                const response = await fetch('http://localhost:5000/api/ai/chat/stream', {
+                const response = await fetch('http://localhost:5001/api/ai/chat/stream', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1203,6 +1336,7 @@ function initCharts() {
     if (salesTrendEl) {
         console.log('✓ 找到销量趋势图容器, 尺寸:', salesTrendEl.offsetWidth, 'x', salesTrendEl.offsetHeight)
         charts.salesTrend = echarts.init(salesTrendEl)
+        salesTrendEl.__chartInstance = charts.salesTrend
         charts.salesTrend.setOption({
             backgroundColor: bgColor,
             tooltip: { 
@@ -2009,7 +2143,7 @@ async function loadChartData(productId) {
     try {
         // 加载趋势数据
         console.log('⏳ 加载趋势数据...')
-        const trendRes = await fetch(`http://localhost:5000/api/goods/analysis/trend/${productId}`, {
+        const trendRes = await fetch(`http://localhost:5001/api/goods/analysis/trend/${productId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         const trendData = await trendRes.json()
@@ -2053,7 +2187,7 @@ async function loadChartData(productId) {
         
         // 加载达人数据
         console.log('⏳ 加载达人数据...')
-        const kolRes = await fetch(`http://localhost:5000/api/goods/analysis/kol/${productId}`, {
+        const kolRes = await fetch(`http://localhost:5001/api/goods/analysis/kol/${productId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         const kolData = await kolRes.json()
@@ -2098,7 +2232,7 @@ async function loadChartData(productId) {
         
         // 加载视频数据
         console.log('⏳ 加载视频数据...')
-        const videoRes = await fetch(`http://localhost:5000/api/goods/analysis/video/${productId}`, {
+        const videoRes = await fetch(`http://localhost:5001/api/goods/analysis/video/${productId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         const videoData = await videoRes.json()
@@ -2146,7 +2280,7 @@ async function loadChartData(productId) {
         
         // 加载直播数据
         console.log('⏳ 加载直播数据...')
-        const liveRes = await fetch(`http://localhost:5000/api/goods/analysis/live/${productId}`, {
+        const liveRes = await fetch(`http://localhost:5001/api/goods/analysis/live/${productId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         const liveData = await liveRes.json()

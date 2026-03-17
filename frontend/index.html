@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html class="dark" lang="zh-CN">
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
     <title>抖音电商热点数据可视化分析系统</title>
     <link href="css/fonts.css?v=5" rel="stylesheet"/>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -32,24 +33,18 @@
     </script>
     <style>
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #111f22; }
-        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        html.dark ::-webkit-scrollbar-track { background: #111f22; }
+        html.dark ::-webkit-scrollbar-thumb { background: #325e67; }
         .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
         .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
         
         /* Vue 未挂载前隐藏应用 */
         [v-cloak] { display: none !important; }
         
-        /* 强制隐藏所有固定定位的遮罩层，直到 Vue 明确显示 */
-        .fixed.inset-0.bg-black\/50 {
-            display: none !important;
-        }
-        
-        /* 只有当 Vue 添加了特定类时才显示 */
-        .fixed.inset-0.bg-black\/50.show-dialog {
-            display: flex !important;
-        }
+        /* Vue v-cloak 已处理未挂载前的闪烁，无需额外隐藏 */
         
         /* 亮色主题样式 */
         .light-theme {
@@ -79,7 +74,9 @@
         html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
         html:not(.dark) .text-white { color: #111827 !important; }
         html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
-        
+        html:not(.dark) .text-gray-300 { color: #4b5563 !important; }
+        html:not(.dark) .hover\:text-white:hover { color: #111827 !important; }
+
         /* 暗色模式保持原样 */
         html.dark .bg-surface-dark { background-color: #16282b; }
         html.dark .bg-card-dark { background-color: #1a3035; }
@@ -96,7 +93,7 @@
 </head>
 <body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
 
-<div id="app" class="flex h-screen" v-cloak :class="isDark ? 'dark' : ''">
+<div id="app" class="flex h-screen" v-cloak>
     <!-- 侧边栏 -->
     <aside class="w-64 bg-white dark:bg-surface-dark border-r border-gray-200 dark:border-input-border flex flex-col">
         <!-- Logo -->
@@ -112,13 +109,29 @@
         <!-- 菜单 -->
         <nav class="flex-1 py-4 overflow-y-auto">
             <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
-            
-            <a v-for="item in filteredMenuItems" :key="item.path"
-               :href="item.path"
-               :class="['sidebar-item flex items-center gap-3 px-6 py-3 text-sm transition-colors', 
-                        currentPath === item.path ? 'active text-primary' : 'text-gray-300 hover:text-white']">
-                <span class="material-symbols-outlined text-xl">{{ item.icon }}</span>
-                {{ item.name }}
+            <a href="index.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary">
+                <span class="material-symbols-outlined text-xl">home</span>首页
+            </a>
+            <a href="dashboard.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">dashboard</span>数据仪表盘
+            </a>
+            <a href="prediction.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">trending_up</span>热点预测
+            </a>
+            <a href="compare.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">compare_arrows</span>商品对比
+            </a>
+            <a href="favorites.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">favorite</span>我的收藏
+            </a>
+            <a href="ai_assistant.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">smart_toy</span>AI 智能助手
+            </a>
+            <a v-if="hasCrawlerPerm" href="crawler.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">bug_report</span>爬虫任务
+            </a>
+            <a href="settings.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">settings</span>系统设置
             </a>
         </nav>
         
@@ -207,6 +220,19 @@
                             <option value="cos_fee">佣金</option>
                             <option value="view_num">浏览量</option>
                         </select>
+                        <!-- 数据导出 -->
+                        <div class="relative" style="display: inline-block;">
+                            <button @click="showExportMenu = !showExportMenu"
+                                    class="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20">
+                                <span class="material-symbols-outlined text-base">download</span>导出
+                            </button>
+                            <div v-if="showExportMenu" class="absolute right-0 top-full mt-1 bg-card-dark border border-input-border rounded-lg shadow-lg z-10 py-1 min-w-[120px]">
+                                <button @click="exportData('csv'); showExportMenu = false"
+                                        class="w-full text-left px-4 py-2 text-sm hover:bg-input-bg">导出 CSV</button>
+                                <button @click="exportData('json'); showExportMenu = false"
+                                        class="w-full text-left px-4 py-2 text-sm hover:bg-input-bg">导出 JSON</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -215,6 +241,21 @@
                     <span class="text-primary">搜索 "{{ searchQuery }}" 的结果：找到 {{ goodsTotal }} 个商品</span>
                 </div>
                 
+                <!-- 时间过滤 -->
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="text-sm text-text-secondary">时间范围:</span>
+                    <input v-model="filterStartDate" type="date"
+                           class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary focus:outline-none">
+                    <span class="text-text-secondary">-</span>
+                    <input v-model="filterEndDate" type="date"
+                           class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary focus:outline-none">
+                    <button @click="goodsPage = 1; loadGoods()"
+                            class="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20">筛选</button>
+                    <button v-if="filterStartDate || filterEndDate"
+                            @click="filterStartDate = ''; filterEndDate = ''; goodsPage = 1; loadGoods()"
+                            class="px-3 py-1.5 bg-input-bg text-text-secondary rounded-lg text-sm hover:bg-primary/10">清除</button>
+                </div>
+
                 <!-- 分类筛选 -->
                 <div class="mb-4 flex flex-wrap gap-2">
                     <button @click="selectedCategory = ''; loadGoods()" 
@@ -311,7 +352,7 @@
                         <span class="material-symbols-outlined text-xl">play_arrow</span>
                         启动列表爬虫
                     </button>
-                    <button @click="showCrawlerConfig = true; dialogOpenedByUser = true"
+                    <button @click="showCrawlerConfig = true"
                             class="flex items-center gap-2 px-4 py-2 bg-input-bg border border-input-border rounded-lg hover:border-primary transition-colors">
                         <span class="material-symbols-outlined text-xl">settings</span>
                         爬虫配置
@@ -354,13 +395,13 @@
     </main>
     
     <!-- 爬虫配置弹窗 -->
-    <div v-if="showCrawlerConfig && dialogOpenedByUser" 
+    <div v-if="showCrawlerConfig"
          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-         @click.self="showCrawlerConfig = false; dialogOpenedByUser = false">
+         @click.self="showCrawlerConfig = false">
         <div class="bg-card-dark rounded-xl p-6 border border-input-border w-full max-w-md mx-4">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold">爬虫配置</h3>
-                <button @click="showCrawlerConfig = false; dialogOpenedByUser = false" 
+                <button @click="showCrawlerConfig = false" 
                         class="p-1 hover:bg-input-bg rounded-lg transition-colors">
                     <span class="material-symbols-outlined">close</span>
                 </button>
@@ -384,12 +425,12 @@
                 </div>
                 
                 <div class="flex items-center gap-3 pt-4">
-                    <button @click="startListCrawler(); showCrawlerConfig = false; dialogOpenedByUser = false" 
+                    <button @click="startListCrawler(); showCrawlerConfig = false" 
                             :disabled="crawlerLoading"
                             class="flex-1 px-4 py-2 bg-primary text-background-dark rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
                         启动爬虫
                     </button>
-                    <button @click="showCrawlerConfig = false; dialogOpenedByUser = false" 
+                    <button @click="showCrawlerConfig = false" 
                             class="flex-1 px-4 py-2 bg-input-bg border border-input-border rounded-lg hover:border-primary transition-colors">
                         取消
                     </button>
@@ -807,7 +848,7 @@
 <script>
 const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch } = Vue
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = 'http://localhost:5001/api'
 
 createApp({
     setup() {
@@ -815,21 +856,13 @@ createApp({
         const currentTime = ref('')
         const mqStatus = ref(false)
         const crawlerLoading = ref(false)
-        const showCrawlerConfig = ref(false)  // 明确初始化为 false
+        const showCrawlerConfig = ref(false)
         const isDark = ref(true)
-        
-        // 添加一个标志，确保对话框只能通过按钮打开
-        const dialogOpenedByUser = ref(false)
-        
-        // 添加诊断：监控 showCrawlerConfig 的变化
-        if (typeof window !== 'undefined') {
-            window.__showCrawlerConfig = showCrawlerConfig
-            console.log('[诊断] showCrawlerConfig 初始值:', showCrawlerConfig.value)
-        }
+        const hasCrawlerPerm = computed(() => hasPermission('crawler:start'))
         
         const crawlerConfig = reactive({
             start_page: 1,
-            end_page: 5
+            end_page: 20
         })
         
         // 商品数据
@@ -845,18 +878,27 @@ createApp({
         // 搜索相关
         const searchQuery = ref('')
         const isSearchMode = ref(false)
+
+        // 时间过滤
+        const filterStartDate = ref('')
+        const filterEndDate = ref('')
+
+        // 导出菜单
+        const showExportMenu = ref(false)
         
-        // 分类列表
-        const categories = ref([
-            '饰品配件',
-            '家居日用',
-            '食品饮料',
-            '服饰鞋包',
-            '美妆个护',
-            '数码家电',
-            '母婴用品',
-            '运动户外'
-        ])
+        // 分类列表（从后端动态加载）
+        const categories = ref([])
+
+        const loadCategories = async () => {
+            try {
+                const result = await request('/goods/categories')
+                if (result.code === 0) {
+                    categories.value = result.data.map(c => c.name)
+                }
+            } catch (e) {
+                console.error('加载分类失败:', e)
+            }
+        }
         
         // 权限检查函数
         const hasPermission = (permissionCode) => {
@@ -867,9 +909,13 @@ createApp({
         
         const menuItems = [
             { name: '首页', path: 'index.html', icon: 'home' },
+            { name: '数据仪表盘', path: 'dashboard.html', icon: 'dashboard' },
+            { name: '热点预测', path: 'prediction.html', icon: 'trending_up' },
+            { name: '商品对比', path: 'compare.html', icon: 'compare_arrows' },
+            { name: '我的收藏', path: 'favorites.html', icon: 'favorite' },
             { name: 'AI 智能助手', path: 'ai_assistant.html', icon: 'smart_toy' },
             { name: '爬虫任务', path: 'crawler.html', icon: 'bug_report', permission: 'crawler:start' },
-            { name: '系统设置', path: 'settings.html', icon: 'settings', permission: 'system:manage' },
+            { name: '系统设置', path: 'settings.html', icon: 'settings' },
         ]
         
         // 根据权限过滤菜单
@@ -975,10 +1021,18 @@ createApp({
                 } else {
                     // 普通列表模式
                     url = `/goods/list?page=${goodsPage.value}&page_size=${goodsPageSize.value}&sort_by=${goodsSort.value}&order=desc`
-                    
+
                     // 添加分类筛选
                     if (selectedCategory.value) {
                         url += `&category=${encodeURIComponent(selectedCategory.value)}`
+                    }
+
+                    // 添加时间过滤
+                    if (filterStartDate.value) {
+                        url += `&start_date=${filterStartDate.value}`
+                    }
+                    if (filterEndDate.value) {
+                        url += `&end_date=${filterEndDate.value}`
                     }
                 }
                 
@@ -1049,6 +1103,35 @@ createApp({
         const openGoodsDetail = (productId) => {
             window.open(`goods_detail.html?id=${productId}`, '_blank')
         }
+
+        // 导出数据
+        const exportData = (format) => {
+            let url = `${API_BASE}/export/goods/${format}?limit=1000`
+            if (filterStartDate.value) url += `&start_date=${filterStartDate.value}`
+            if (filterEndDate.value) url += `&end_date=${filterEndDate.value}`
+            if (selectedCategory.value) url += `&category=${encodeURIComponent(selectedCategory.value)}`
+            if (isSearchMode.value && searchQuery.value.trim()) url += `&keyword=${encodeURIComponent(searchQuery.value.trim())}`
+
+            // 使用 fetch 下载（带 token）
+            const token = getToken()
+            fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(res => {
+                if (!res.ok) throw new Error('导出失败')
+                const disposition = res.headers.get('Content-Disposition')
+                const filename = disposition ? disposition.split('filename=')[1] : `export.${format}`
+                return res.blob().then(blob => ({ blob, filename }))
+            }).then(({ blob, filename }) => {
+                const a = document.createElement('a')
+                a.href = URL.createObjectURL(blob)
+                a.download = filename
+                a.click()
+                URL.revokeObjectURL(a.href)
+                Toast.success(`${format.toUpperCase()} 导出成功`)
+            }).catch(e => {
+                Toast.error('导出失败: ' + e.message)
+            })
+        }
         
         // 启动列表爬虫
         const startListCrawler = async () => {
@@ -1103,17 +1186,14 @@ createApp({
         }
         
         onMounted(() => {
-            // 第一优先级：强制确保对话框关闭
-            showCrawlerConfig.value = false
-            dialogOpenedByUser.value = false
-            
             checkAuth()
             updateTime()
             timeInterval = setInterval(updateTime, 1000)
             checkMqStatus()
             loadGoods()
-            loadStats()  // 加载统计数据
-            
+            loadStats()
+            loadCategories()
+
             // 初始化主题
             const savedTheme = localStorage.getItem('theme')
             if (savedTheme === 'light') {
@@ -1123,20 +1203,6 @@ createApp({
                 isDark.value = true
                 document.documentElement.classList.add('dark')
             }
-            
-            // 多次检查确保对话框关闭
-            const checkDialog = () => {
-                if (showCrawlerConfig.value === true && dialogOpenedByUser.value === false) {
-                    console.error('[强制修复] 检测到对话框被异常打开，强制关闭')
-                    showCrawlerConfig.value = false
-                }
-            }
-            
-            setTimeout(checkDialog, 50)
-            setTimeout(checkDialog, 100)
-            setTimeout(checkDialog, 200)
-            setTimeout(checkDialog, 500)
-            setTimeout(checkDialog, 1000)
         })
         
         onUnmounted(() => {
@@ -1167,7 +1233,6 @@ createApp({
             mqStatus,
             crawlerLoading,
             showCrawlerConfig,
-            dialogOpenedByUser,
             crawlerConfig,
             isDark,
             goodsList,
@@ -1182,6 +1247,7 @@ createApp({
             searchQuery,
             isSearchMode,
             hasPermission,
+            hasCrawlerPerm,
             handleLogout,
             startListCrawler,
             toggleTheme,
@@ -1189,7 +1255,11 @@ createApp({
             refreshGoods,
             searchGoods,
             clearSearch,
-            openGoodsDetail
+            openGoodsDetail,
+            filterStartDate,
+            filterEndDate,
+            showExportMenu,
+            exportData
         }
     }
 }).mount('#app')
@@ -1232,7 +1302,7 @@ createApp({
         async loadSuggestions() {
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch('http://localhost:5000/api/ai/suggestions', {
+                const response = await fetch('http://localhost:5001/api/ai/suggestions', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 const result = await response.json()
@@ -1247,7 +1317,7 @@ createApp({
         async loadHistory() {
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch(`http://localhost:5000/api/ai/history?session_id=${this.sessionId}`, {
+                const response = await fetch(`http://localhost:5001/api/ai/history?session_id=${this.sessionId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 const result = await response.json()
@@ -1293,7 +1363,7 @@ createApp({
             
             try {
                 const token = localStorage.getItem('token')
-                const response = await fetch('http://localhost:5000/api/ai/chat/stream', {
+                const response = await fetch('http://localhost:5001/api/ai/chat/stream', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

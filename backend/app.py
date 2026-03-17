@@ -139,8 +139,8 @@ if __name__ == '__main__':
     print("\n" + "=" * 50)
     print("Flask 服务启动")
     print("=" * 50)
-    print(f"地址: http://localhost:5000")
+    print(f"地址: http://localhost:5001")
     print(f"默认账号: admin / admin123")
     print("=" * 50 + "\n")
     app.config['SECRET_KEY'] = 'dy-analysis-secret-key-2024'
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True,allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5001, debug=True,allow_unsafe_werkzeug=True)

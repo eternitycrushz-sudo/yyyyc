@@ -55,13 +55,14 @@ class UserModel:
         try:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    """INSERT INTO sys_user (username, password, nickname, email, phone) 
+                    """INSERT INTO sys_user (username, password, nickname, email, phone)
                        VALUES (%s, %s, %s, %s, %s)""",
-                    (username, UserModel.hash_password(password), 
+                    (username, UserModel.hash_password(password),
                      nickname or username, email, phone)
                 )
+                last_id = cursor.lastrowid
             conn.commit()
-            return cursor.lastrowid
+            return last_id
         finally:
             conn.close()
     
