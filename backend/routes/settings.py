@@ -6,6 +6,7 @@
 from flask import Blueprint, jsonify, request, g
 from backend.models.base import get_db_connection
 from backend.utils.decorators import login_required, permission_required
+from backend.routes.oplog import log_operation
 import hashlib
 import logging
 
@@ -108,6 +109,7 @@ def update_user(user_id):
         cursor.close()
         conn.close()
 
+        log_operation('更新', '用户管理', f'更新用户ID={user_id}')
         return jsonify({'code': 0, 'msg': '更新成功'})
     except Exception as e:
         logger.error(f"更新用户失败: {e}", exc_info=True)
@@ -133,6 +135,7 @@ def reset_password(user_id):
 
         return jsonify({'code': 0, 'msg': f'密码已重置为 {new_password}'})
     except Exception as e:
+        log_operation('重置密码', '用户管理', f'重置用户ID={user_id} 密码失败', status=0)
         return jsonify({'code': -1, 'msg': str(e)}), 500
 
 
@@ -153,8 +156,10 @@ def delete_user(user_id):
         cursor.close()
         conn.close()
 
+        log_operation('删除', '用户管理', f'删除用户ID={user_id}')
         return jsonify({'code': 0, 'msg': '删除成功'})
     except Exception as e:
+        log_operation('删除', '用户管理', f'删除用户ID={user_id} 失败', status=0)
         return jsonify({'code': -1, 'msg': str(e)}), 500
 
 

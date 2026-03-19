@@ -169,12 +169,23 @@
                 暂无历史会话
             </div>
             <div class="space-y-2">
-                <button v-for="session in sessions" :key="session.session_id"
-                        @click="selectSession(session)"
-                        :class="['w-full text-left p-3 rounded-lg text-sm transition-colors border', session.session_id === sessionId ? 'bg-primary/10 border-primary/40 text-white' : 'bg-input-bg border-transparent hover:border-primary/30']">
-                    <div class="font-medium truncate">{{ formatSessionTitle(session) }}</div>
-                    <div class="text-xs text-text-secondary mt-1">{{ formatSessionTime(session.updated_at || session.created_at) }}</div>
-                </button>
+                <div v-for="session in sessions" :key="session.session_id"
+                     :class="['relative group w-full text-left p-3 rounded-lg text-sm transition-colors border', session.session_id === sessionId ? 'bg-primary/10 border-primary/40 text-white' : 'bg-input-bg border-transparent hover:border-primary/30']">
+                    <div @click="selectSession(session)" class="cursor-pointer pr-6">
+                        <div class="font-medium truncate">{{ formatSessionTitle(session) }}</div>
+                        <div class="text-xs text-text-secondary mt-1">{{ formatSessionTime(session.updated_at || session.created_at) }}</div>
+                    </div>
+                    <button @click.stop="deleteSession(session.session_id)"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-400 transition-all p-1 rounded"
+                            title="删除会话">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14H6L5 6"></path>
+                            <path d="M10 11v6M14 11v6"></path>
+                            <path d="M9 6V4h6v2"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </aside>
@@ -448,6 +459,31 @@ createApp({
             await loadSessionHistory()
         }
 
+        const deleteSession = async (sid) => {
+            if (!confirm('确定删除该会话吗？')) return
+            try {
+                const token = localStorage.getItem('token')
+                const res = await fetch(`${API_BASE}/ai/session/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ session_id: sid })
+                })
+                const result = await res.json()
+                if (result.code === 0) {
+                    sessions.value = sessions.value.filter(s => s.session_id !== sid)
+                    if (sessionId.value === sid) {
+                        messages.value = []
+                        const newSid = sessions.value.length > 0 ? sessions.value[0].session_id : createSessionId()
+                        sessionId.value = newSid
+                        localStorage.setItem(SESSION_KEY, newSid)
+                        if (sessions.value.length > 0) await loadSessionHistory()
+                    }
+                }
+            } catch (e) {
+                console.error('删除会话失败:', e)
+            }
+        }
+
         const createNewSession = () => {
             const newSessionId = createSessionId()
             localStorage.setItem(SESSION_KEY, newSessionId)
@@ -592,6 +628,7 @@ createApp({
             renderMarkdown,
             createNewSession,
             selectSession,
+            deleteSession,
             loadSessions,
             formatSessionTime,
             formatSessionTitle

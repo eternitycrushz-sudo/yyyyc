@@ -79,22 +79,27 @@
                             </div>
                             <div>
                                 <label class="text-text-secondary text-xs block mb-1">邮箱</label>
-                                <div class="font-medium">{{ profileInfo.email || '-' }}</div>
+                                <input v-model="profileForm.email" type="email" placeholder="请输入邮箱"
+                                       class="w-full bg-input-bg border border-input-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"/>
                             </div>
                             <div>
                                 <label class="text-text-secondary text-xs block mb-1">手机号</label>
-                                <div class="font-medium">{{ profileInfo.phone || '-' }}</div>
+                                <input v-model="profileForm.phone" type="text" placeholder="请输入手机号"
+                                       class="w-full bg-input-bg border border-input-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"/>
                             </div>
                             <div>
                                 <label class="text-text-secondary text-xs block mb-1">角色</label>
                                 <div><span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-xs">{{ profileInfo.roles?.map(r => r.name).join(', ') || '用户' }}</span></div>
                             </div>
                         </div>
+                        <div class="mt-4">
+                            <button @click="saveProfile" class="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/80 transition-colors">保存信息</button>
+                        </div>
                     </div>
 
                     <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
                         <h3 class="text-lg font-semibold mb-6">修改密码</h3>
-                        <form @submit.prevent="changePassword" class="space-y-4 max-w-sm">
+                        <div class="space-y-4 max-w-sm">
                             <div>
                                 <label class="text-text-secondary text-xs block mb-1">旧密码</label>
                                 <input v-model="pwdForm.old_password" type="password" placeholder="请输入当前密码"
@@ -110,8 +115,8 @@
                                 <input v-model="pwdForm.confirm_password" type="password" placeholder="再次输入新密码"
                                        class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary outline-none"/>
                             </div>
-                            <button type="submit" class="px-6 py-2 bg-primary text-background-dark rounded-lg text-sm font-medium hover:bg-primary/90">确认修改</button>
-                        </form>
+                            <button @click="changePassword" class="px-6 py-2 bg-primary text-background-dark rounded-lg text-sm font-medium hover:bg-primary/90">确认修改</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,7 +143,15 @@
                                 <td class="py-3 px-4">{{ u.id }}</td>
                                 <td class="py-3 px-4 font-medium">{{ u.username }}</td>
                                 <td class="py-3 px-4">{{ u.nickname || '-' }}</td>
-                                <td class="py-3 px-4"><span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-xs">{{ u.role_names || '无角色' }}</span></td>
+                                <td class="py-3 px-4">
+                                    <select @change="changeUserRole(u.id, $event.target.value)"
+                                            class="bg-input-bg border border-input-border rounded px-2 py-0.5 text-xs text-primary focus:outline-none focus:border-primary">
+                                        <option v-for="r in roles" :key="r.code" :value="r.code"
+                                                :selected="u.role_codes === r.code || u.role_codes?.includes(r.code)">
+                                            {{ r.name }}
+                                        </option>
+                                    </select>
+                                </td>
                                 <td class="py-3 px-4"><span :class="u.status ? 'text-green-400' : 'text-red-400'" class="text-xs">{{ u.status ? '正常' : '禁用' }}</span></td>
                                 <td class="py-3 px-4 text-text-secondary text-xs">{{ u.created_at }}</td>
                                 <td class="py-3 px-4 text-right">
@@ -274,6 +287,7 @@ createApp({
         const currentUserId = ref(0)
 
         const profileInfo = ref({})
+        const profileForm = reactive({ email: '', phone: '' })
         const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
 
         const reportStartDate = ref('')
@@ -291,7 +305,24 @@ createApp({
 
         async function loadProfile() {
             const res = await apiFetch('/auth/info')
-            if (res.success) profileInfo.value = res.data
+            if (res.success) {
+                profileInfo.value = res.data
+                profileForm.email = res.data.email || ''
+                profileForm.phone = res.data.phone || ''
+            }
+        }
+
+        async function saveProfile() {
+            const res = await apiFetch('/auth/update-profile', {
+                method: 'POST',
+                body: JSON.stringify({ email: profileForm.email, phone: profileForm.phone })
+            })
+            if (res.success) {
+                window.Toast?.success('个人信息更新成功')
+                loadProfile()
+            } else {
+                window.Toast?.error(res.message || '更新失败')
+            }
         }
 
         async function changePassword() {
@@ -309,10 +340,14 @@ createApp({
                 body: JSON.stringify({ old_password: pwdForm.old_password, new_password: pwdForm.new_password })
             })
             if (res.success) {
-                window.Toast?.success('密码修改成功')
+                window.Toast?.success('密码修改成功，请重新登录')
                 pwdForm.old_password = ''
                 pwdForm.new_password = ''
                 pwdForm.confirm_password = ''
+                setTimeout(() => {
+                    localStorage.removeItem('token')
+                    window.location.href = 'login.html'
+                }, 1500)
             } else {
                 window.Toast?.error(res.message)
             }
@@ -332,6 +367,15 @@ createApp({
         async function resetUserPwd(uid) {
             const res = await apiFetch(`/settings/users/${uid}/reset_password`, { method: 'POST', body: JSON.stringify({ password: '123456' }) })
             if (res.code === 0) window.Toast?.success(res.msg)
+            else window.Toast?.error(res.msg)
+        }
+
+        async function changeUserRole(uid, roleCode) {
+            const res = await apiFetch(`/settings/users/${uid}`, {
+                method: 'PUT',
+                body: JSON.stringify({ role_code: roleCode })
+            })
+            if (res.code === 0) { window.Toast?.success('角色更新成功'); loadUsers() }
             else window.Toast?.error(res.msg)
         }
 
@@ -419,9 +463,9 @@ createApp({
         return {
             user, isAdmin, hasCrawlerPerm, activeTab, tabs, users, roles, allPermissions, rolePerms,
             logs, logPage, logTotal, currentUserId,
-            profileInfo, pwdForm, changePassword, loadProfile,
+            profileInfo, profileForm, saveProfile, pwdForm, changePassword, loadProfile,
             reportStartDate, reportEndDate, reportJson,
-            loadUsers, toggleUserStatus, resetUserPwd, deleteUser,
+            loadUsers, toggleUserStatus, resetUserPwd, deleteUser, changeUserRole,
             loadRoles, togglePerm, saveRolePerms, loadLogs,
             generateReport, handleLogout
         }

@@ -27,9 +27,8 @@ def get_goods_trend(product_id):
         cursor.execute("""
             SELECT date, sales_count, sales_amount, video_count, live_count, user_count
             FROM analysis_goods_trend
-            WHERE goods_id = %s
+            WHERE goods_id = %s AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
             ORDER BY date ASC
-            LIMIT 30
         """, (product_id,))
         
         rows = cursor.fetchall()
@@ -85,9 +84,8 @@ def get_goods_kol(product_id):
         cursor.execute("""
             SELECT date, user_count, video_count
             FROM analysis_goods_trend
-            WHERE goods_id = %s
+            WHERE goods_id = %s AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
             ORDER BY date ASC
-            LIMIT 30
         """, (product_id,))
         
         trend_rows = cursor.fetchall()
@@ -159,9 +157,8 @@ def get_goods_video(product_id):
         cursor.execute("""
             SELECT date, video_count, play_count, sales_count, like_count, comment_count
             FROM analysis_video_sales
-            WHERE goods_id = %s
+            WHERE goods_id = %s AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
             ORDER BY date ASC
-            LIMIT 30
         """, (product_id,))
         
         rows = cursor.fetchall()
@@ -217,9 +214,8 @@ def get_goods_live(product_id):
         cursor.execute("""
             SELECT date, live_count, sales_count, sales_amount, viewer_count
             FROM analysis_live_trend
-            WHERE goods_id = %s
+            WHERE goods_id = %s AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
             ORDER BY date ASC
-            LIMIT 30
         """, (product_id,))
         
         rows = cursor.fetchall()

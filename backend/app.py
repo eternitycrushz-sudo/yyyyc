@@ -118,11 +118,62 @@ def handle_connect():
 # 初始化数据库
 # ============================================
 
+def sync_dates():
+    """
+    自动同步数据库日期：
+    每次启动时，将各分析表的日期整体平移，使最新数据对齐到今天。
+    """
+    try:
+        from backend.models.base import get_db_connection
+        from datetime import date, datetime
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        tables = [
+            'analysis_goods_trend',
+            'analysis_video_sales',
+            'analysis_live_trend',
+        ]
+
+        today = date.today()
+        for table in tables:
+            try:
+                cursor.execute(f"SELECT MAX(date) as max_date FROM `{table}`")
+                row = cursor.fetchone()
+                if not row or not row['max_date']:
+                    continue
+                max_date = row['max_date']
+                # 兼容字符串和 date 对象
+                if isinstance(max_date, str):
+                    max_date = datetime.strptime(max_date[:10], '%Y-%m-%d').date()
+                elif isinstance(max_date, datetime):
+                    max_date = max_date.date()
+                diff = (today - max_date).days
+                if diff > 0:
+                    cursor.execute(
+                        f"UPDATE `{table}` SET date = DATE_ADD(date, INTERVAL %s DAY)",
+                        (diff,)
+                    )
+                    print(f"[日期同步] {table}: 日期整体前移 {diff} 天")
+                else:
+                    print(f"[日期同步] {table}: 已是最新，无需更新")
+            except Exception as te:
+                print(f"[日期同步] {table} 跳过: {te}")
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("[日期同步] 完成")
+    except Exception as e:
+        print(f"[日期同步] 失败: {e}")
+
+
 def init_app():
     """初始化应用（创建表、默认数据）"""
     try:
         init_tables()
         init_default_data()
+        sync_dates()
         print("应用初始化完成")
     except Exception as e:
         print(f"初始化失败: {e}")

@@ -40,7 +40,7 @@ class UserModel:
         try:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, username, nickname, email, phone, avatar, status, created_at FROM sys_user WHERE id = %s",
+                    "SELECT id, username, nickname, email, phone, avatar, status, created_at, password FROM sys_user WHERE id = %s",
                     (user_id,)
                 )
                 return cursor.fetchone()

@@ -207,7 +207,32 @@
                                    placeholder="请再次输入密码"/>
                         </div>
                     </label>
-                    
+
+                    <!-- 角色选择 -->
+                    <div>
+                        <label class="block text-text-secondary text-xs mb-2">注册角色</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all"
+                                   :class="form.role_code === 'viewer' ? 'border-primary/60 bg-primary/10 text-primary' : 'border-input-border bg-input-bg text-text-secondary hover:border-primary/30'">
+                                <input type="radio" v-model="form.role_code" value="viewer" class="hidden"/>
+                                <span class="material-symbols-outlined text-lg">visibility</span>
+                                <div>
+                                    <div class="text-sm font-medium">观察者</div>
+                                    <div class="text-xs opacity-70">只能查看数据</div>
+                                </div>
+                            </label>
+                            <label class="flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all"
+                                   :class="form.role_code === 'operator' ? 'border-primary/60 bg-primary/10 text-primary' : 'border-input-border bg-input-bg text-text-secondary hover:border-primary/30'">
+                                <input type="radio" v-model="form.role_code" value="operator" class="hidden"/>
+                                <span class="material-symbols-outlined text-lg">manage_accounts</span>
+                                <div>
+                                    <div class="text-sm font-medium">操作员</div>
+                                    <div class="text-xs opacity-70">可执行爬虫任务</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- 注册按钮 -->
                     <button :disabled="loading"
                             class="mt-2 flex w-full items-center justify-center rounded-lg bg-primary h-12 px-6 text-background-dark text-base font-bold hover:bg-[#0ebacb] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(19,200,236,0.3)] hover:shadow-[0_0_25px_rgba(19,200,236,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -245,7 +270,8 @@ createApp({
             username: '',
             nickname: '',
             password: '',
-            confirmPassword: ''
+            confirmPassword: '',
+            role_code: 'viewer'
         })
         
         const loading = ref(false)
@@ -288,7 +314,8 @@ createApp({
                     body: JSON.stringify({
                         username: form.username.trim(),
                         password: form.password,
-                        nickname: form.nickname.trim() || form.username.trim()
+                        nickname: form.nickname.trim() || form.username.trim(),
+                        role_code: form.role_code
                     })
                 })
                 

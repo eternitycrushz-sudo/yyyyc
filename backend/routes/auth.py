@@ -114,6 +114,11 @@ def register():
     username = data.get('username', '').strip()
     password = data.get('password', '')
     nickname = data.get('nickname', '')
+    role_code = data.get('role_code', 'viewer')  # 默认观察者
+
+    # 只允许注册 viewer 和 operator 角色
+    if role_code not in ('viewer', 'operator'):
+        role_code = 'viewer'
     
     if not username or not password:
         return jsonify({
@@ -138,10 +143,12 @@ def register():
         # 创建用户
         user_id = UserModel.create(username, password, nickname)
         
-        # 默认分配 viewer 角色
-        viewer_role = RoleModel.find_by_code('viewer')
-        if viewer_role:
-            UserModel.assign_role(user_id, viewer_role['id'])
+        # 分配角色
+        selected_role = RoleModel.find_by_code(role_code)
+        if not selected_role:
+            selected_role = RoleModel.find_by_code('viewer')
+        if selected_role:
+            UserModel.assign_role(user_id, selected_role['id'])
         
         return jsonify({
             'success': True,
@@ -283,6 +290,9 @@ def change_password():
     if UserModel.hash_password(old_password) != user['password']:
         return jsonify({'success': False, 'message': '旧密码不正确'}), 400
 
+    if old_password == new_password:
+        return jsonify({'success': False, 'message': '新密码不能与旧密码相同'}), 400
+
     try:
         from backend.models.base import get_db_connection
         conn = get_db_connection()
@@ -296,6 +306,46 @@ def change_password():
         return jsonify({'success': True, 'message': '密码修改成功'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'修改失败: {str(e)}'}), 500
+
+
+@auth_bp.route('/update-profile', methods=['POST'])
+@login_required
+def update_profile():
+    """更新个人信息（邮箱、手机号、昵称）"""
+    data = request.json or {}
+    email = data.get('email', '').strip()
+    phone = data.get('phone', '').strip()
+    nickname = data.get('nickname', '').strip()
+
+    user_id = g.current_user['user_id']
+    updates = []
+    params = []
+    if email:
+        updates.append("email = %s")
+        params.append(email)
+    if phone:
+        updates.append("phone = %s")
+        params.append(phone)
+    if nickname:
+        updates.append("nickname = %s")
+        params.append(nickname)
+
+    if not updates:
+        return jsonify({'success': False, 'message': '没有要更新的内容'}), 400
+
+    try:
+        from backend.models.base import get_db_connection
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                f"UPDATE sys_user SET {', '.join(updates)} WHERE id = %s",
+                params + [user_id]
+            )
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': '个人信息更新成功'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'更新失败: {str(e)}'}), 500
 
 
 @auth_bp.route('/logout', methods=['POST'])

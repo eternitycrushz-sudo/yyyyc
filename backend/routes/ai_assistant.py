@@ -537,6 +537,36 @@ def get_session_messages():
     })
 
 
+@ai_bp.route('/session/delete', methods=['POST'])
+@login_required
+def delete_session():
+    """删除会话及其消息"""
+    data = request.json or {}
+    session_id = (data.get('session_id') or '').strip()
+    user_id = g.current_user['user_id']
+
+    if not session_id:
+        return jsonify({'code': -1, 'msg': '缺少 session_id'}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM chat_history WHERE user_id = %s AND session_id = %s",
+            (user_id, session_id)
+        )
+        cursor.execute(
+            "DELETE FROM chat_sessions WHERE user_id = %s AND session_id = %s",
+            (user_id, session_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'code': 0, 'msg': '删除成功'})
+    except Exception as e:
+        return jsonify({'code': -1, 'msg': str(e)}), 500
+
+
 @ai_bp.route('/suggestions', methods=['GET'])
 @login_required
 def get_suggestions():
