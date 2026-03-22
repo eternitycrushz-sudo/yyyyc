@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统诊断工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Courier New', monospace; }
+        .status-ok { color: #22c55e; }
+        .status-error { color: #ef4444; }
+        .status-warn { color: #f59e0b; }
+        .log-box { background: #111; color: #0f0; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto; font-size: 12px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white p-6">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-2">系统诊断工具</h1>
+        <p class="text-gray-400 mb-6 text-sm">Diagnostic Tool - Check system status and troubleshoot issues</p>
+
+        <div class="space-y-4">
+            <!-- Login Section -->
+            <div class="bg-gray-800 p-4 rounded-lg border-2 border-blue-500">
+                <h2 class="text-xl font-semibold mb-2">Authentication</h2>
+                <div id="authStatus" class="text-sm mb-3">
+                    <span class="status-error">X Not logged in</span>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="username" placeholder="Username (default: admin)" class="flex-1 px-3 py-2 bg-gray-700 rounded text-white" value="admin">
+                    <input type="password" id="password" placeholder="Password (default: admin123)" class="flex-1 px-3 py-2 bg-gray-700 rounded text-white" value="admin123">
+                    <button onclick="doLogin()" class="bg-green-600 px-4 py-2 rounded hover:bg-green-700">Login</button>
+                </div>
+            </div>
+
+            <!-- Backend Health Check -->
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">后端服务检查</h2>
+                <button onclick="checkBackend()" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                    检查后端服务
+                </button>
+                <div id="backendStatus" class="mt-2"></div>
+            </div>
+
+            <!-- API Health Check -->
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">API 端点检查</h2>
+                <button onclick="checkAPIs()" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                    检查 API 端点
+                </button>
+                <div id="apiStatus" class="mt-2"></div>
+            </div>
+
+            <!-- Database Check -->
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">数据库检查</h2>
+                <button onclick="checkDatabase()" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                    检查数据库连接
+                </button>
+                <div id="dbStatus" class="mt-2"></div>
+            </div>
+
+            <!-- Sample Product Check -->
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">示例商品数据</h2>
+                <button onclick="checkSampleProduct()" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                    获取示例商品
+                </button>
+                <div id="productStatus" class="mt-2"></div>
+            </div>
+
+            <!-- Logs -->
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">Diagnostic Logs</h2>
+                <div id="logs" class="log-box"></div>
+            </div>
+
+            <!-- Troubleshooting Guide -->
+            <div class="bg-yellow-900 p-4 rounded-lg border border-yellow-600">
+                <h2 class="text-xl font-semibold mb-3 text-yellow-300">Troubleshooting Guide</h2>
+
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <h3 class="font-semibold text-yellow-200 mb-1">No products found?</h3>
+                        <ul class="list-disc list-inside space-y-1 text-gray-300">
+                            <li>Ensure MySQL is running: <code class="bg-gray-800 px-2 py-1">net start MySQL80</code></li>
+                            <li>Import initial data: Open MySQL and run <code class="bg-gray-800 px-2 py-1">dy_analysis_system.sql</code></li>
+                            <li>Or run crawler to fetch data: Use crawler.html page</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-yellow-200 mb-1">Getting 401 Unauthorized?</h3>
+                        <ul class="list-disc list-inside space-y-1 text-gray-300">
+                            <li>Login first using default credentials: admin / admin123</li>
+                            <li>Token will be saved in localStorage automatically</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-yellow-200 mb-1">Backend connection failed?</h3>
+                        <ul class="list-disc list-inside space-y-1 text-gray-300">
+                            <li>Ensure Flask backend is running on port 5001</li>
+                            <li>Run: <code class="bg-gray-800 px-2 py-1">python backend/app.py</code></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-yellow-200 mb-1">Steps to get data:</h3>
+                        <ol class="list-decimal list-inside space-y-1 text-gray-300">
+                            <li>Start MySQL service</li>
+                            <li>Import database: <code class="bg-gray-800 px-2 py-1">mysql -u root -p dy_analysis_system < dy_analysis_system.sql</code></li>
+                            <li>Start backend: <code class="bg-gray-800 px-2 py-1">python backend/app.py</code></li>
+                            <li>Login with admin / admin123</li>
+                            <li>Navigate to products to see data</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check auth status on load
+        function updateAuthStatus() {
+            const token = localStorage.getItem('token')
+            const user = localStorage.getItem('user')
+            const authStatusEl = document.getElementById('authStatus')
+
+            if (token && user) {
+                try {
+                    const userData = JSON.parse(user)
+                    authStatusEl.innerHTML = `<span class="status-ok">+ Logged in as: ${userData.username}</span>`
+                } catch (e) {
+                    authStatusEl.innerHTML = `<span class="status-ok">+ Logged in</span>`
+                }
+            } else {
+                authStatusEl.innerHTML = `<span class="status-error">X Not logged in</span>`
+            }
+        }
+
+        async function doLogin() {
+            const username = document.getElementById('username').value
+            const password = document.getElementById('password').value
+            const authStatusEl = document.getElementById('authStatus')
+
+            if (!username || !password) {
+                authStatusEl.innerHTML = `<span class="status-error">X Enter username and password</span>`
+                return
+            }
+
+            authStatusEl.innerHTML = 'Logging in...'
+            addLog(`Attempting login with ${username}...`)
+
+            try {
+                const res = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                })
+                const data = await res.json()
+
+                if (data.code === 0 && data.data.token) {
+                    localStorage.setItem('token', data.data.token)
+                    localStorage.setItem('user', JSON.stringify(data.data.user))
+                    updateAuthStatus()
+                    addLog(`Login successful for ${username}`, 'success')
+                } else {
+                    authStatusEl.innerHTML = `<span class="status-error">X Login failed: ${data.msg}</span>`
+                    addLog(`Login failed: ${data.msg}`, 'error')
+                }
+            } catch (e) {
+                authStatusEl.innerHTML = `<span class="status-error">X Login error: ${e.message}</span>`
+                addLog(`Login error: ${e.message}`, 'error')
+            }
+        }
+
+        function addLog(msg, type = 'info') {
+            const logsEl = document.getElementById('logs')
+            const time = new Date().toLocaleTimeString()
+            const icon = {
+                'info': 'i',
+                'success': '+',
+                'error': 'X',
+                'warn': '!'
+            }[type]
+            const color = {
+                'info': '#0f0',
+                'success': '#0f0',
+                'error': '#f00',
+                'warn': '#ff0'
+            }[type]
+            const line = document.createElement('div')
+            line.style.color = color
+            line.textContent = `[${time}] [${icon}] ${msg}`
+            logsEl.appendChild(line)
+            logsEl.scrollTop = logsEl.scrollHeight
+        }
+
+        async function checkBackend() {
+            const statusEl = document.getElementById('backendStatus')
+            statusEl.innerHTML = 'Checking...'
+            addLog('Checking backend service...')
+
+            try {
+                const res = await fetch('http://localhost:5001/api/health')
+                if (res.ok) {
+                    const data = await res.json()
+                    statusEl.innerHTML = '<span class="status-ok">+ Backend service OK</span>'
+                    addLog('Backend service OK', 'success')
+                } else {
+                    statusEl.innerHTML = `<span class="status-error">X Backend returned: ${res.status}</span>`
+                    addLog(`Backend returned: ${res.status}`, 'error')
+                }
+            } catch (e) {
+                statusEl.innerHTML = `<span class="status-error">X Cannot connect to backend: ${e.message}</span>`
+                addLog(`Cannot connect to backend: ${e.message}`, 'error')
+            }
+        }
+
+        async function checkAPIs() {
+            const statusEl = document.getElementById('apiStatus')
+            statusEl.innerHTML = 'Checking...'
+            addLog('Checking API endpoints...')
+
+            const endpoints = [
+                { url: '/api/health', needsAuth: false },
+                { url: '/api/goods/list?page=1&page_size=1', needsAuth: true },
+                { url: '/api/dashboard/overview', needsAuth: true }
+            ]
+
+            let results = []
+            for (const endpoint of endpoints) {
+                try {
+                    const headers = {}
+                    if (endpoint.needsAuth) {
+                        const token = localStorage.getItem('token')
+                        if (token) {
+                            headers['Authorization'] = `Bearer ${token}`
+                        } else {
+                            results.push(`${endpoint.url}: No token (need login)`)
+                            addLog(`${endpoint.url}: No auth token`, 'warn')
+                            continue
+                        }
+                    }
+                    const res = await fetch(`http://localhost:5001${endpoint.url}`, { headers })
+                    const status = res.ok ? '+' : 'X'
+                    results.push(`${endpoint.url}: ${res.status} ${status}`)
+                    addLog(`${endpoint.url}: ${res.status}`, res.ok ? 'success' : 'error')
+                } catch (e) {
+                    results.push(`${endpoint.url}: Connection failed X`)
+                    addLog(`${endpoint.url}: ${e.message}`, 'error')
+                }
+            }
+
+            statusEl.innerHTML = results.map(r => `<div>${r}</div>`).join('')
+        }
+
+        async function checkDatabase() {
+            const statusEl = document.getElementById('dbStatus')
+            const token = localStorage.getItem('token')
+
+            if (!token) {
+                statusEl.innerHTML = '<span class="status-warn">! Need to login first</span>'
+                addLog('Need authentication token to check database', 'warn')
+                return
+            }
+
+            statusEl.innerHTML = 'Checking...'
+            addLog('Checking database connection...')
+
+            try {
+                const res = await fetch('http://localhost:5001/api/dashboard/overview', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                if (res.ok && data.code === 0) {
+                    statusEl.innerHTML = `<span class="status-ok">+ Database OK</span><div class="mt-2 text-sm">Total goods: ${data.data.total_goods}</div>`
+                    addLog('Database connection OK', 'success')
+                } else {
+                    statusEl.innerHTML = `<span class="status-error">X Error: ${data?.msg || res.status}</span>`
+                    addLog(`Error: ${data?.msg || res.status}`, 'error')
+                }
+            } catch (e) {
+                statusEl.innerHTML = `<span class="status-error">X Cannot check database: ${e.message}</span>`
+                addLog(`Cannot check database: ${e.message}`, 'error')
+            }
+        }
+
+        async function checkSampleProduct() {
+            const statusEl = document.getElementById('productStatus')
+            const token = localStorage.getItem('token')
+
+            if (!token) {
+                statusEl.innerHTML = '<span class="status-warn">! Need to login first</span>'
+                addLog('Need authentication to get products', 'warn')
+                return
+            }
+
+            statusEl.innerHTML = 'Loading...'
+            addLog('Getting sample product...')
+
+            try {
+                const res = await fetch('http://localhost:5001/api/goods/list?page=1&page_size=1', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                if (data.code === 0 && data.data.list && data.data.list.length > 0) {
+                    const product = data.data.list[0]
+                    statusEl.innerHTML = `
+                        <div class="status-ok">+ Product found</div>
+                        <div class="mt-2 text-sm">
+                            <div>ID: ${product.product_id}</div>
+                            <div>Name: ${product.title}</div>
+                            <div>Price: CNY${product.price}</div>
+                            <div class="mt-2">
+                                <a href="goods_detail.html?id=${product.product_id}" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    `
+                    addLog(`Product found: ${product.title}`, 'success')
+                } else {
+                    statusEl.innerHTML = `<span class="status-warn">! No products in database</span><div class="text-sm mt-2">Please import data via crawler or check if database has goods_list data</div>`
+                    addLog('No products found in database', 'warn')
+                }
+            } catch (e) {
+                statusEl.innerHTML = `<span class="status-error">X Failed: ${e.message}</span>`
+                addLog(`Failed: ${e.message}`, 'error')
+            }
+        }
+
+        // Auto-run diagnostics on page load
+        window.addEventListener('load', () => {
+            updateAuthStatus()
+            addLog('Diagnostic tool loaded')
+            addLog('Please login first, then click buttons to run diagnostics')
+            checkBackend()
+        })
+    </script>
+</body>
+</html>

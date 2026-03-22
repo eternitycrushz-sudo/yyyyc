@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>抖音电商数据分析平台 - 掌握未来趋势，引领电商增长</title>
+    <link href="css/fonts.css" rel="stylesheet"/>
+    <script src="lib/vue.global.js"></script>
+    <script src="lib/tailwind.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "primary-dark": "#0ea5c7",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        .dark ::-webkit-scrollbar-track { background: #1a1a1a; }
+        .dark ::-webkit-scrollbar-thumb { background: #444; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #666; }
+        
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(19, 200, 236, 0.2);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-bg {
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 50%, #80deea 100%);
+        }
+        
+        .dark .hero-bg {
+            background: linear-gradient(135deg, #0d1b1e 0%, #16282b 50%, #1a3035 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+
+<div id="app">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary text-2xl">analytics</span>
+                    </div>
+                    <span class="font-bold text-xl">抖音电商数据分析平台</span>
+                </div>
+                
+                <!-- 菜单 -->
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">产品功能</a>
+                    <a href="#pricing" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">价格方案</a>
+                    <a href="#about" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">关于我们</a>
+                    
+                    <!-- 主题切换 -->
+                    <button @click="toggleTheme" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <span v-if="isDark" class="material-symbols-outlined text-yellow-400">light_mode</span>
+                        <span v-else class="material-symbols-outlined text-gray-600">dark_mode</span>
+                    </button>
+                    
+                    <a href="login.html" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                        立即体验
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section class="hero-bg pt-32 pb-20 px-6">
+        <div class="max-w-7xl mx-auto text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6">
+                掌握未来趋势，<span class="gradient-text">引领电商增长</span>
+            </h1>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto">
+                基于AI技术与海量数据分析，为您洞察电商趋势，助力商品销量提升
+            </p>
+            <div class="flex items-center justify-center gap-4">
+                <a href="register.html" class="px-8 py-4 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium text-lg shadow-lg hover:shadow-xl">
+                    免费开始试用
+                </a>
+                <a href="#features" class="px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium text-lg border border-gray-200 dark:border-gray-700">
+                    了解更多
+                </a>
+            </div>
+            
+            <!-- 统计数据 -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 max-w-4xl mx-auto">
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">5K+</div>
+                    <div class="text-gray-600 dark:text-gray-400">商家用户</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">100万+</div>
+                    <div class="text-gray-600 dark:text-gray-400">商品数据</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">24/7</div>
+                    <div class="text-gray-600 dark:text-gray-400">实时监控</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">99.9%</div>
+                    <div class="text-gray-600 dark:text-gray-400">数据准确率</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 功能特性 -->
+    <section id="features" class="py-20 px-6 bg-white dark:bg-gray-900">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">强大的功能特性</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-400">全方位的数据分析工具，助力您的电商业务增长</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- AI 7日趋势预测 -->
+                <div class="feature-card bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
+                    <div class="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-primary text-3xl">psychology</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">AI 7日趋势预测</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">
+                        基于深度学习算法，精准预测未来一周的销量趋势，让您提前布局市场策略，抢占先机。
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        <li class="flex items-center gap-2">
+                            <span class="text-primary">✓</span> 深度机器学习算法
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-primary">✓</span> 精准度达95%以上
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- 自动化爬虫采集 -->
+                <div class="feature-card bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
+                    <div class="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-purple-500 text-3xl">bug_report</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">自动化爬虫采集</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">
+                        全天候自动采集电商平台数据，实时更新商品信息、销量数据、用户评价等关键指标。
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        <li class="flex items-center gap-2">
+                            <span class="text-purple-500">✓</span> 5K万+ 商品实时监控
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-purple-500">✓</span> 每10分钟更新一次
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- 智能 AI 选品助手 -->
+                <div class="feature-card bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
+                    <div class="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-green-500 text-3xl">shopping_bag</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">智能 AI 选品助手</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">
+                        基于市场趋势分析，智能推荐高潜力商品，帮助您发现蓝海市场，降低选品风险。
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-500">✓</span> 热销商品推荐
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-500">✓</span> 蓝海市场挖掘
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-green-500">✓</span> 竞品分析对比
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <section class="py-20 px-6 bg-gray-900 dark:bg-black">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-4xl font-bold text-white mb-6">
+                准备好提升您的电商效率了吗？
+            </h2>
+            <p class="text-xl text-gray-300 mb-10">
+                现在注册，即享免费试用期，开启数据驱动的电商之旅
+            </p>
+            <div class="flex items-center justify-center gap-4">
+                <a href="register.html" class="px-8 py-4 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium text-lg shadow-lg">
+                    开始免费试用
+                </a>
+                <a href="login.html" class="px-8 py-4 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors font-medium text-lg border border-white/20">
+                    我有账号
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="font-bold mb-4">产品</h3>
+                    <ul class="space-y-2 text-gray-600 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-primary">功能介绍</a></li>
+                        <li><a href="#" class="hover:text-primary">价格方案</a></li>
+                        <li><a href="#" class="hover:text-primary">API 文档</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-4">支持</h3>
+                    <ul class="space-y-2 text-gray-600 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-primary">帮助中心</a></li>
+                        <li><a href="#" class="hover:text-primary">联系我们</a></li>
+                        <li><a href="#" class="hover:text-primary">使用教程</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-4">公司</h3>
+                    <ul class="space-y-2 text-gray-600 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-primary">关于我们</a></li>
+                        <li><a href="#" class="hover:text-primary">加入我们</a></li>
+                        <li><a href="#" class="hover:text-primary">隐私政策</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-4">联系方式</h3>
+                    <ul class="space-y-2 text-gray-600 dark:text-gray-400">
+                        <li>邮箱: contact@example.com</li>
+                        <li>电话: 400-123-4567</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-800 pt-8 text-center text-gray-600 dark:text-gray-400">
+                <p>© 2024 抖音电商数据分析平台. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script>
+const { createApp, ref, onMounted } = Vue
+
+createApp({
+    setup() {
+        const isDark = ref(false)
+        
+        // 初始化主题
+        onMounted(() => {
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                isDark.value = true
+                document.documentElement.classList.add('dark')
+            }
+        })
+        
+        // 切换主题
+        const toggleTheme = () => {
+            isDark.value = !isDark.value
+            if (isDark.value) {
+                document.documentElement.classList.add('dark')
+                localStorage.setItem('theme', 'dark')
+            } else {
+                document.documentElement.classList.remove('dark')
+                localStorage.setItem('theme', 'light')
+            }
+        }
+        
+        return {
+            isDark,
+            toggleTheme
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

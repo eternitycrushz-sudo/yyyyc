@@ -1,0 +1,748 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>AI 智能助手 - 抖音电商分析系统</title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/fonts.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/utils.js?v=1"></script>
+    <!-- Markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script>
+        // 配置 Tailwind
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+        
+        // 配置 marked
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            })
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Inter, "Noto Sans SC", sans-serif;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        
+        .message-user { 
+            background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%); 
+        }
+        .message-ai { 
+            background: #1a3035; 
+            border: 1px solid #325e67; 
+        }
+        
+        /* Markdown 样式 */
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            font-weight: bold;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: #fff;
+        }
+        .markdown-content h1 { font-size: 1.5em; }
+        .markdown-content h2 { font-size: 1.3em; }
+        .markdown-content h3 { font-size: 1.1em; }
+        .markdown-content p { 
+            margin-bottom: 0.5em; 
+            line-height: 1.6;
+        }
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        .markdown-content li { 
+            margin-bottom: 0.25em;
+            line-height: 1.5;
+        }
+        .markdown-content code {
+            background: rgba(0,0,0,0.3);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #13c8ec;
+        }
+        .markdown-content pre {
+            background: rgba(0,0,0,0.3);
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+            color: #fff;
+        }
+        .markdown-content blockquote {
+            border-left: 3px solid #13c8ec;
+            padding-left: 1em;
+            margin: 0.5em 0;
+            opacity: 0.8;
+        }
+        .markdown-content a {
+            color: #13c8ec;
+            text-decoration: underline;
+        }
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0.5em 0;
+        }
+        .markdown-content th, .markdown-content td {
+            border: 1px solid #325e67;
+            padding: 0.5em;
+            text-align: left;
+        }
+        .markdown-content th {
+            background: rgba(19, 200, 236, 0.1);
+            font-weight: bold;
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .typing-indicator span {
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        /* 亮色模式覆盖 */
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
+
+<div id="app" class="flex h-screen overflow-hidden">
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-surface-dark border-r border-input-border flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <a href="index.html" class="flex items-center gap-3 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined text-primary">arrow_back</span>
+                <span class="font-bold">返回首页</span>
+            </a>
+        </div>
+        
+        <div class="flex-1 p-4 overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm text-text-secondary font-semibold">会话历史</h3>
+                <button @click="clearAllHistory" v-if="sessions.length > 0"
+                        class="text-xs text-red-400 hover:text-red-300 px-1 py-0.5">清空</button>
+            </div>
+            <div v-if="sessions.length === 0" class="text-xs text-text-secondary/80 px-2 py-2">
+                暂无历史会话
+            </div>
+            <div class="space-y-2">
+                <div v-for="session in sessions" :key="session.session_id"
+                     class="group flex items-start gap-2">
+                    <button @click="selectSession(session)"
+                            :class="['flex-1 text-left p-3 rounded-lg text-sm transition-colors border', session.session_id === sessionId ? 'bg-primary/10 border-primary/40 text-white' : 'bg-input-bg border-transparent hover:border-primary/30']">
+                        <div class="font-medium truncate">{{ formatSessionTitle(session) }}</div>
+                        <div class="text-xs text-text-secondary mt-1">{{ formatSessionTime(session.updated_at || session.created_at) }}</div>
+                    </button>
+                    <button @click="deleteSession(session.session_id)"
+                            class="p-2 text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                            title="删除此会话">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 主聊天区 -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <!-- 顶部栏 -->
+        <header class="h-16 bg-surface-dark border-b border-input-border flex items-center justify-between px-6 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">smart_toy</span>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg">AI 智能助手</h1>
+                    <p class="text-xs text-text-secondary">电商数据分析专家</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-text-secondary">会话：{{ shortSessionId }}</span>
+                <button @click="createNewSession"
+                        class="h-9 px-3 rounded-md border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-sm">
+                    新建会话
+                </button>
+            </div>
+        </header>
+        
+        <!-- 消息列表 -->
+        <div ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+            <!-- 欢迎消息 -->
+            <div v-if="messages.length === 0" class="text-center py-12">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-4xl">psychology</span>
+                </div>
+                <h2 class="text-xl font-bold mb-2">你好！我是 AI 智能助手</h2>
+                <p class="text-text-secondary">我可以帮你分析电商数据、推荐商品、解答问题</p>
+            </div>
+
+            <!-- 推荐问题区域 -->
+            <div v-if="showSuggestions" class="flex justify-center">
+                <div class="w-full max-w-3xl bg-surface-dark/60 border border-input-border/60 rounded-2xl p-4">
+                    <div class="text-sm text-text-secondary mb-3">推荐问题</div>
+                    <div class="flex flex-wrap gap-3">
+                        <button v-for="(suggestion, idx) in suggestions" :key="idx"
+                                @click="sendSuggestion(suggestion)"
+                                class="px-4 py-2 rounded-full bg-input-bg text-sm text-text-secondary hover:text-white hover:bg-primary/20 border border-transparent hover:border-primary/30 transition-colors">
+                            {{ suggestion }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 消息气泡 -->
+            <div v-for="(msg, idx) in messages" :key="idx" 
+                 :class="['flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                <!-- AI 头像 -->
+                <div v-if="msg.role === 'assistant'" class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                </div>
+                
+                <!-- 消息内容 -->
+                <div :class="['max-w-[70%] rounded-2xl px-4 py-3', 
+                              msg.role === 'user' ? 'message-user text-background-dark' : 'message-ai']">
+                    <!-- 用户消息：纯文本 -->
+                    <div v-if="msg.role === 'user'" class="whitespace-pre-wrap">{{ msg.content }}</div>
+                    <!-- AI 消息：Markdown 渲染 -->
+                    <div v-else class="markdown-content" v-html="renderMarkdown(msg.content)"></div>
+                    <div class="text-xs opacity-70 mt-1">{{ msg.time }}</div>
+                </div>
+                
+                <!-- 用户头像 -->
+                <div v-if="msg.role === 'user'" class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-xl">person</span>
+                </div>
+            </div>
+            
+            <!-- AI 正在输入 -->
+            <div v-if="isTyping" class="flex gap-3 justify-start">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                </div>
+                <div class="message-ai rounded-2xl px-4 py-3">
+                    <div class="typing-indicator flex gap-1">
+                        <span class="w-2 h-2 bg-primary rounded-full"></span>
+                        <span class="w-2 h-2 bg-primary rounded-full"></span>
+                        <span class="w-2 h-2 bg-primary rounded-full"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 输入框 -->
+        <div class="border-t border-input-border p-4 bg-surface-dark flex-shrink-0">
+            <form @submit.prevent="sendMessage" class="flex gap-3">
+                <input v-model="inputMessage"
+                       :disabled="isTyping"
+                       class="flex-1 h-12 px-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-text-secondary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50 transition-all"
+                       placeholder="输入你的问题..."
+                       type="text"/>
+                <button :disabled="isTyping || !inputMessage.trim()"
+                        class="px-6 h-12 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                        type="submit">
+                    <span class="material-symbols-outlined">send</span>
+                    发送
+                </button>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+const { createApp, ref, onMounted, nextTick, computed } = Vue
+
+const API_BASE = 'http://localhost:5001/api'
+const createSessionId = () => {
+    if (window.crypto && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    return `sess_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`
+}
+
+const getSessionKey = (userId) => {
+    // 为每个用户创建独立的sessionKey，确保不同用户的会话完全隔离
+    return `ai_session_${userId}`
+}
+
+const parseToken = (token) => {
+    try {
+        // JWT token 格式: header.payload.signature
+        const parts = token.split('.')
+        if (parts.length !== 3) return null
+
+        // 解码payload
+        const payload = JSON.parse(atob(parts[1]))
+        return payload
+    } catch (e) {
+        console.error('Failed to parse token:', e)
+        return null
+    }
+}
+
+const loadSessionId = (userId) => {
+    const sessionKey = getSessionKey(userId)
+    let sessionId = localStorage.getItem(sessionKey)
+    if (!sessionId) {
+        sessionId = createSessionId()
+        localStorage.setItem(sessionKey, sessionId)
+    }
+    return sessionId
+}
+
+createApp({
+    setup() {
+        const messages = ref([])
+        const inputMessage = ref('')
+        const isTyping = ref(false)
+        const messagesContainer = ref(null)
+        const isUserScrolling = ref(false)
+        const sessionId = ref('')
+        const userId = ref('0')  // 存储当前用户ID，用于会话隔离
+        const suggestions = ref([
+            "推荐几个当前热门的商品",
+            "哪些商品佣金最高？",
+            "美妆类目有哪些商品？",
+            "价格在50-100元的商品有哪些？",
+            "帮我分析一下商品销量趋势",
+            "如何提高商品转化率？"
+        ])
+        const sessions = ref([])
+        
+        const shortSessionId = computed(() => {
+            if (!sessionId.value) return '-'
+            return sessionId.value.slice(0, 8)
+        })
+
+        const showSuggestions = computed(() => messages.value.length === 0)
+        
+        const getToken = () => localStorage.getItem('token')
+        
+        // 检查是否在底部
+        const isAtBottom = () => {
+            if (!messagesContainer.value) return true
+            const container = messagesContainer.value
+            const threshold = 100
+            return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+        }
+        
+        // 智能滚动
+        const scrollToBottom = () => {
+            nextTick(() => {
+                if (messagesContainer.value && !isUserScrolling.value) {
+                    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+                }
+            })
+        }
+        
+        // 监听用户滚动
+        const handleScroll = () => {
+            if (!messagesContainer.value) return
+            isUserScrolling.value = !isAtBottom()
+        }
+        
+        // Markdown 渲染
+        const renderMarkdown = (content) => {
+            if (typeof marked === 'undefined') {
+                return content.replace(/\n/g, '<br>')
+            }
+            try {
+                return marked.parse(content)
+            } catch (e) {
+                console.error('Markdown parse error:', e)
+                return content.replace(/\n/g, '<br>')
+            }
+        }
+
+        const normalizeTime = (value) => {
+            if (!value) return ''
+            const date = new Date(value)
+            if (isNaN(date.getTime())) {
+                return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            }
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        }
+
+        const formatSessionTime = (value) => {
+            if (!value) return ''
+            const date = new Date(value)
+            if (isNaN(date.getTime())) return ''
+            return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        }
+
+        const formatSessionTitle = (session) => {
+            if (!session) return '未命名会话'
+            if (session.title && session.title.trim()) return session.title
+            if (session.session_id) return `会话 ${session.session_id.slice(0, 6)}`
+            return '未命名会话'
+        }
+
+        const loadSessions = async () => {
+            try {
+                const token = getToken()
+                const response = await fetch(`${API_BASE}/ai/sessions?limit=50`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                if (!response.ok) {
+                    return
+                }
+                const result = await response.json()
+                if (result && result.success && Array.isArray(result.data)) {
+                    sessions.value = result.data
+                }
+            } catch (e) {
+                console.error('Load sessions error:', e)
+            }
+        }
+
+        const loadSessionHistory = async () => {
+            if (!sessionId.value) return
+            try {
+                const token = getToken()
+                const response = await fetch(`${API_BASE}/ai/session/messages?session_id=${encodeURIComponent(sessionId.value)}&limit=50`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                if (!response.ok) {
+                    return
+                }
+                const result = await response.json()
+                if (result && result.success && Array.isArray(result.data)) {
+                    messages.value = result.data.map(item => ({
+                        role: item.role,
+                        content: item.content,
+                        time: normalizeTime(item.created_at)
+                    }))
+                    scrollToBottom()
+                }
+            } catch (e) {
+                console.error('Load history error:', e)
+            }
+        }
+
+        const selectSession = async (session) => {
+            if (!session || !session.session_id) return
+            sessionId.value = session.session_id
+            const sessionKey = getSessionKey(userId.value)
+            localStorage.setItem(sessionKey, session.session_id)
+            messages.value = []
+            await loadSessionHistory()
+        }
+
+        const createNewSession = () => {
+            const newSessionId = createSessionId()
+            const sessionKey = getSessionKey(userId.value)
+            localStorage.setItem(sessionKey, newSessionId)
+            sessionId.value = newSessionId
+            messages.value = []
+            inputMessage.value = ''
+            isTyping.value = false
+            isUserScrolling.value = false
+            Toast.success('已新建会话')
+        }
+        
+        const sendMessage = async () => {
+            const message = inputMessage.value.trim()
+            if (!message || isTyping.value) return
+            
+            // 添加用户消息
+            messages.value.push({
+                role: 'user',
+                content: message,
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            })
+            
+            inputMessage.value = ''
+            scrollToBottom()
+            isTyping.value = true
+            isUserScrolling.value = false
+            
+            // 添加空的AI消息用于流式更新
+            const aiMessageIndex = messages.value.length
+            messages.value.push({
+                role: 'assistant',
+                content: '',
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            })
+            let sendSucceeded = false
+            try {
+                if (!sessionId.value) {
+                    sessionId.value = loadSessionId()
+                }
+                const token = getToken()
+
+                // 获取product_id（优先使用URL参数或localStorage）
+                const params = new URLSearchParams(window.location.search)
+                const productId = params.get('id') || localStorage.getItem('currentProductId')
+
+                const requestBody = {
+                    message: message,
+                    session_id: sessionId.value
+                }
+
+                // 如果有product_id，则添加到请求中
+                if (productId) {
+                    requestBody.product_id = productId
+                    console.log('Sending message with product_id:', productId)
+                }
+
+                const response = await fetch(`${API_BASE}/ai/chat/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(requestBody)
+                })
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`)
+                }
+                
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+                let buffer = ''
+                
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    
+                    buffer += decoder.decode(value, { stream: true })
+                    const lines = buffer.split('\n')
+                    buffer = lines.pop() // 保留不完整的行
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim()
+                            if (data === '[DONE]') {
+                                break
+                            }
+                            
+                            try {
+                                const parsed = JSON.parse(data)
+                                if (parsed.content) {
+                                    messages.value[aiMessageIndex].content += parsed.content
+                                    scrollToBottom()
+                                } else if (parsed.error) {
+                                    throw new Error(parsed.error)
+                                }
+                            } catch (e) {
+                                console.error('Parse error:', e)
+                            }
+                        }
+                    }
+                }
+                
+                scrollToBottom()
+                sendSucceeded = true
+
+            } catch (e) {
+                console.error('AI chat error:', e)
+                messages.value[aiMessageIndex].content = '抱歉，我遇到了一些问题。请稍后重试。'
+                Toast.error('AI 回复失败: ' + e.message)
+            } finally {
+                isTyping.value = false
+                if (sendSucceeded) {
+                    loadSessions()
+                }
+            }
+        }
+        
+        const sendSuggestion = (suggestion) => {
+            inputMessage.value = suggestion
+            sendMessage()
+        }
+
+        const deleteSession = async (sid) => {
+            if (!confirm('确定要删除此会话吗？')) return
+            try {
+                const token = getToken()
+                if (!token) {
+                    window.location.href = 'login.html'
+                    return
+                }
+                const response = await fetch(`${API_BASE}/ai/session/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ session_id: sid })
+                })
+                if (!response.ok) {
+                    Toast.error('删除失败')
+                    return
+                }
+                const result = await response.json()
+                if (result.success) {
+                    Toast.success('会话已删除')
+                    if (sessionId.value === sid) {
+                        messages.value = []
+                        const newSessionId = createSessionId()
+                        const sessionKey = getSessionKey(userId.value)
+                        localStorage.setItem(sessionKey, newSessionId)
+                        sessionId.value = newSessionId
+                    }
+                    loadSessions()
+                } else {
+                    Toast.error(result.message || '删除失败')
+                }
+            } catch (e) {
+                console.error('Delete session error:', e)
+                Toast.error('删除失败: ' + e.message)
+            }
+        }
+
+        const clearAllHistory = async () => {
+            if (!confirm('确定要清空所有会话吗？此操作不可撤销。')) return
+            try {
+                const token = getToken()
+                if (!token) {
+                    window.location.href = 'login.html'
+                    return
+                }
+                const response = await fetch(`${API_BASE}/ai/history/clear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                if (!response.ok) {
+                    Toast.error('清空失败')
+                    return
+                }
+                const result = await response.json()
+                if (result.success) {
+                    Toast.success('所有会话已清空')
+                    messages.value = []
+                    sessions.value = []
+                    const newSessionId = createSessionId()
+                    // 使用当前用户ID更新localStorage
+                    const sessionKey = getSessionKey(userId.value)
+                    localStorage.setItem(sessionKey, newSessionId)
+                    sessionId.value = newSessionId
+                } else {
+                    Toast.error(result.message || '清空失败')
+                }
+            } catch (e) {
+                console.error('Clear history error:', e)
+                Toast.error('清空失败: ' + e.message)
+            }
+        }
+
+        onMounted(() => {
+            const token = getToken()
+            if (!token) {
+                window.location.href = 'login.html'
+                return
+            }
+
+            // 从token中解析userId，确保每个用户有独立的会话
+            const tokenPayload = parseToken(token)
+            const currentUserId = tokenPayload?.user_id || '0'
+            userId.value = currentUserId
+            console.log('AI Assistant: Current user ID:', currentUserId)
+
+            // 从URL参数中获取product_id
+            const params = new URLSearchParams(window.location.search)
+            const productId = params.get('id')
+            if (productId) {
+                localStorage.setItem('currentProductId', productId)
+                console.log('AI Assistant: Current product ID:', productId)
+            }
+
+            // 使用userId初始化sessionId，确保不同用户使用不同的会话
+            sessionId.value = loadSessionId(currentUserId)
+            loadSessionHistory()
+            loadSessions()
+
+            // 监听滚动事件
+            if (messagesContainer.value) {
+                messagesContainer.value.addEventListener('scroll', handleScroll)
+            }
+
+            console.log('AI Assistant mounted successfully, SessionID:', sessionId.value.slice(0, 8), 'UserID:', currentUserId)
+        })
+        
+        return {
+            messages,
+            inputMessage,
+            isTyping,
+            messagesContainer,
+            sessionId,
+            userId,
+            shortSessionId,
+            suggestions,
+            sessions,
+            showSuggestions,
+            sendMessage,
+            sendSuggestion,
+            renderMarkdown,
+            createNewSession,
+            selectSession,
+            loadSessions,
+            formatSessionTime,
+            formatSessionTitle,
+            deleteSession,
+            clearAllHistory
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

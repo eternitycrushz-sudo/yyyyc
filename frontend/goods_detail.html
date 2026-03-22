@@ -1,0 +1,2500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>商品详情 - 抖音电商热点分析系统</title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link href="css/fonts.css" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/utils.js?v=1"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e7f1f3; }
+        .dark ::-webkit-scrollbar-track { background: #1f3a3e; }
+        ::-webkit-scrollbar-thumb { background: #13c8ec; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0fa8c9; }
+        [v-cloak] { display: none !important; }
+        .tech-grid {
+            background-image: radial-gradient(#13c8ec 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+        }
+        #syncIcon {
+            color: #10b981;
+        }
+        #refreshChartBtn {
+            transition: transform 0.3s ease;
+        }
+        #refreshChartBtn.refreshing {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d191b] dark:text-white transition-colors duration-300">
+
+<div id="app" v-cloak>
+    <!-- 顶部导航 -->
+    <header class="flex items-center justify-between border-b border-[#e7f1f3] dark:border-[#1f3a3e] px-10 py-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <button @click="goBack" class="p-2 hover:bg-[#e7f1f3] dark:hover:bg-[#1f3a3e] rounded-lg transition-colors">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div class="flex items-center gap-4">
+                <div class="size-8 text-primary">
+                    <span class="material-symbols-outlined text-4xl">insights</span>
+                </div>
+                <h1 class="text-xl font-bold">商品详情</h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <!-- 最后更新时间显示 -->
+            <div id="lastUpdateTime" class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm animate-pulse" id="syncIcon">sync</span>
+                <span id="updateTimeText">实时更新中...</span>
+            </div>
+
+            <!-- 主题切换按钮 -->
+            <button @click="toggleTheme" class="p-2 rounded-lg hover:bg-[#e7f1f3] dark:hover:bg-[#1f3a3e] transition-colors">
+                <span v-if="isDark" class="material-symbols-outlined text-yellow-400">light_mode</span>
+                <span v-else class="material-symbols-outlined">dark_mode</span>
+            </button>
+
+            <!-- 手动刷新按钮 -->
+            <button id="refreshChartBtn" class="p-2 rounded-lg hover:bg-[#e7f1f3] dark:hover:bg-[#1f3a3e] transition-colors" title="手动刷新数据">
+                <span class="material-symbols-outlined">refresh</span>
+            </button>
+
+            <button @click="toggleFavorite" class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border"
+                    :class="isFavorited ? 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30' : 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30'">
+                <span class="material-symbols-outlined text-sm">{{ isFavorited ? 'favorite' : 'favorite_border' }}</span>
+                <span class="font-medium">{{ isFavorited ? '已收藏' : '收藏' }}</span>
+            </button>
+            <button @click="shareGoods" class="flex items-center gap-2 px-4 py-2 bg-[#e7f1f3] dark:bg-[#1f3a3e] rounded-lg hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-sm">share</span>
+                <span class="font-medium">分享</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="flex items-center justify-center min-h-screen">
+        <div class="text-center relative">
+            <div class="absolute inset-0 tech-grid opacity-5"></div>
+            <div class="relative z-10">
+                <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent"></div>
+                <div class="mt-6 text-lg text-[#4c8d9a] dark:text-[#a0c4cc]">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="flex items-center justify-center min-h-screen">
+        <div class="text-center relative">
+            <div class="absolute inset-0 tech-grid opacity-5"></div>
+            <div class="relative z-10">
+                <span class="material-symbols-outlined text-8xl text-red-400">error</span>
+                <div class="mt-6 text-2xl font-bold">{{ error }}</div>
+                <button @click="goBack" class="mt-8 px-8 py-3 bg-primary text-[#0d191b] rounded-lg font-bold hover:opacity-90 transition-opacity">
+                    返回列表
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品详情内容 -->
+    <div v-else-if="goods" class="max-w-[1400px] mx-auto px-6 py-8">
+        <!-- 商品基本信息 -->
+        <div class="grid grid-cols-1 lg:grid-cols-[480px_1fr] gap-8 mb-8">
+            <!-- 左侧：图片 - 不固定 -->
+            <div>
+                <div class="aspect-square rounded-xl overflow-hidden bg-white dark:bg-[#1a2e32] border border-[#e7f1f3] dark:border-[#2a454a] shadow-lg">
+                    <img :src="goods.cover" :alt="goods.title" 
+                         class="w-full h-full object-cover"
+                         @error="$event.target.src='https://via.placeholder.com/800x800?text=No+Image'">
+                </div>
+            </div>
+            
+            <!-- 右侧：基本信息 -->
+            <div class="space-y-5">
+                <!-- 标题 -->
+                <h2 class="text-2xl font-bold leading-tight">{{ goods.title }}</h2>
+                
+                <!-- 标签 -->
+                <div v-if="goods.labels && goods.labels.length > 0" class="flex flex-wrap gap-2">
+                    <span v-for="(label, idx) in goods.labels" :key="idx"
+                          class="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded border border-primary/20">
+                        {{ typeof label === 'string' ? label : label.name }}
+                    </span>
+                </div>
+                
+                <!-- 价格信息 -->
+                <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                    <div class="flex items-baseline gap-3 mb-4">
+                        <span class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">价格</span>
+                        <span class="text-4xl font-bold text-red-500">¥{{ (goods.price || 0).toFixed(2) }}</span>
+                        <span v-if="(goods.coupon || 0) > 0" class="text-lg text-[#4c8d9a] dark:text-[#a0c4cc] line-through">
+                            ¥{{ ((goods.price || 0) + (goods.coupon || 0)).toFixed(2) }}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white dark:bg-[#1a2e32] rounded-lg p-4 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-1">佣金比例</div>
+                            <div class="text-2xl font-bold text-primary">{{ (goods.cos_ratio || 0).toFixed(2) }}%</div>
+                        </div>
+                        <div class="bg-white dark:bg-[#1a2e32] rounded-lg p-4 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-1">预估佣金</div>
+                            <div class="text-2xl font-bold text-primary">¥{{ (goods.cos_fee || 0).toFixed(2) }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 店铺信息 -->
+                <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                    <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-3">店铺信息</div>
+                    <div class="flex items-center gap-3">
+                        <img v-if="goods.shop_logo" 
+                             :src="goods.shop_logo" 
+                             class="w-12 h-12 rounded-full border border-primary/30"
+                             @error="$event.target.src='https://via.placeholder.com/48x48?text=Shop'">
+                        <div class="flex-1">
+                            <div class="font-semibold">{{ goods.shop_name || '未知店铺' }}</div>
+                            <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">ID: {{ goods.shop_id || '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 销售数据 -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                        <div class="text-2xl font-bold text-primary mb-1">{{ (goods.sales || 0).toLocaleString() }}</div>
+                        <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">总销量</div>
+                    </div>
+                    <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                        <div class="text-2xl font-bold text-primary mb-1">{{ (goods.view_num || 0).toLocaleString() }}</div>
+                        <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">浏览量</div>
+                    </div>
+                    <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                        <div class="text-2xl font-bold text-primary mb-1">{{ (goods.kol_num || 0).toLocaleString() }}</div>
+                        <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">带货达人</div>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="flex gap-3">
+                    <a :href="goods.url" target="_blank" 
+                       class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary text-[#0d191b] rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                        <span class="material-symbols-outlined text-lg">open_in_new</span>
+                        <span>查看原商品</span>
+                    </a>
+                    <button @click="downloadReport" class="px-5 py-3 bg-[#e7f1f3] dark:bg-[#1f3a3e] rounded-lg hover:opacity-90 transition-opacity" title="下载商品分析报告">
+                        <span class="material-symbols-outlined">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据分析标签页 -->
+        <div class="bg-card-dark rounded-xl border border-input-border overflow-hidden">
+            <!-- 标签头 -->
+            <div class="flex gap-1 p-2 bg-surface-dark border-b border-input-border overflow-x-auto">
+                <button @click="activeTab = 'trend'" 
+                        :class="['px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap', 
+                                 activeTab === 'trend' ? 'bg-primary text-background-dark' : 'text-text-secondary hover:bg-input-bg hover:text-text-primary']">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">analytics</span>
+                    基础分析
+                </button>
+                <button @click="activeTab = 'kol'" 
+                        :class="['px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap', 
+                                 activeTab === 'kol' ? 'bg-primary text-background-dark' : 'text-text-secondary hover:bg-input-bg hover:text-text-primary']">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">person</span>
+                    达人分析
+                </button>
+                <button @click="activeTab = 'video'" 
+                        :class="['px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap', 
+                                 activeTab === 'video' ? 'bg-primary text-background-dark' : 'text-text-secondary hover:bg-input-bg hover:text-text-primary']">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">videocam</span>
+                    视频分析
+                </button>
+                <button @click="activeTab = 'live'" 
+                        :class="['px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap', 
+                                 activeTab === 'live' ? 'bg-primary text-background-dark' : 'text-text-secondary hover:bg-input-bg hover:text-text-primary']">
+                    <span class="material-symbols-outlined text-sm align-middle mr-1">live_tv</span>
+                    直播分析
+                </button>
+            </div>
+            
+            <!-- 标签内容 -->
+            <div class="p-6">
+                <!-- 基础分析 -->
+<div v-show="activeTab === 'trend'" class="space-y-6">
+                    <!-- 核心数据 -->
+                    <div>
+                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">analytics</span>
+                            <span>核心数据</span>
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <div class="text-2xl font-bold mb-1">{{ (goods.view_num || 0).toLocaleString() }}</div>
+                                <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-1">浏览量</div>
+                                <div class="text-xs text-green-400">增幅 0-30%</div>
+                            </div>
+                            <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <div class="text-2xl font-bold mb-1">{{ (goods.sales || 0).toLocaleString() }}</div>
+                                <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">商品销量</div>
+                            </div>
+                            <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <div class="text-2xl font-bold mb-1">¥{{ ((goods.pay_amount || (goods.sales * goods.price)) || 0).toLocaleString() }}</div>
+                                <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-1">商品销售额</div>
+                                <div class="text-xs text-green-400">增幅 0-30%</div>
+                            </div>
+                            <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <div class="text-2xl font-bold mb-1">{{ (goods.order_count || goods.order_num || 0).toLocaleString() }}</div>
+                                <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc]">支付买家</div>
+                            </div>
+                            <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <div class="text-2xl font-bold mb-1">{{ Math.floor((goods.sales || 0) * 0.6).toLocaleString() }}</div>
+                                <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-1">支付直播</div>
+                                <div class="text-xs text-green-400">增幅率 0-30%</div>
+                            </div>
+                            <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-4 text-center border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <div class="text-2xl font-bold mb-1">{{ Math.floor((goods.sales || 0) * 0.4).toLocaleString() }}</div>
+                                <div class="text-xs text-[#4c8d9a] dark:text-[#a0c4cc] mb-1">支付视频</div>
+                                <div class="text-xs text-green-400">增幅率 0-30%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 趋势图表 - 4个图表 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">商品销量趋势</h4>
+                            <div id="salesTrendChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">商品销售额趋势</h4>
+                            <div id="amountTrendChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">视频&直播数量趋势</h4>
+                            <div id="contentCountChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">达人数量趋势</h4>
+                            <div id="userCountChart" style="height: 256px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 达人分析 -->
+                <div v-show="activeTab === 'kol'" class="space-y-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">每日达人带货视频数</h4>
+                            <div id="kolDailyChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">新增达人数</h4>
+                            <div id="kolNewChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">达人销量排行TOP10</h4>
+                            <div id="kolTopSalesChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">达人粉丝数分布</h4>
+                            <div id="kolFollowerChart" style="height: 256px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 视频分析 -->
+                <div v-show="activeTab === 'video'">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">每日视频数量</h4>
+                            <div id="videoCountChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">视频播放量</h4>
+                            <div id="videoViewsChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">视频销量趋势</h4>
+                            <div id="videoSalesChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">视频互动数据</h4>
+                            <div id="videoEngagementChart" style="height: 256px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 直播分析 -->
+                <div v-show="activeTab === 'live'">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">每日直播场次</h4>
+                            <div id="liveCountChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">直播销量</h4>
+                            <div id="liveSalesChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">直播销售额</h4>
+                            <div id="liveAmountChart" style="height: 256px;"></div>
+                        </div>
+                        <div class="bg-[#f6f8f8] dark:bg-[#16282b] rounded-lg p-5 border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <h4 class="font-semibold mb-4 text-sm">直播观看人数</h4>
+                            <div id="liveViewerChart" style="height: 256px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, onMounted, watch } = Vue
+
+createApp({
+    setup() {
+        const loading = ref(true)
+        const error = ref(null)
+        const goods = ref(null)
+        const activeTab = ref('trend')
+        const isDark = ref(false)
+        const isFavorited = ref(false)
+        
+        // 监听标签切换，重绘图表
+        watch(activeTab, (newTab) => {
+            console.log('切换到标签:', newTab)
+            setTimeout(() => {
+                if (newTab === 'kol') {
+                    console.log('重绘达人图表')
+                    if (charts.kolDaily) charts.kolDaily.resize()
+                    if (charts.kolNew) charts.kolNew.resize()
+                    if (charts.kolTopSales) charts.kolTopSales.resize()
+                    if (charts.kolFollower) charts.kolFollower.resize()
+                } else if (newTab === 'video') {
+                    console.log('重绘视频图表')
+                    if (charts.videoCount) charts.videoCount.resize()
+                    if (charts.videoViews) charts.videoViews.resize()
+                    if (charts.videoSales) charts.videoSales.resize()
+                    if (charts.videoEngagement) charts.videoEngagement.resize()
+                } else if (newTab === 'live') {
+                    console.log('重绘直播图表')
+                    if (charts.liveCount) charts.liveCount.resize()
+                    if (charts.liveSales) charts.liveSales.resize()
+                    if (charts.liveAmount) charts.liveAmount.resize()
+                    if (charts.liveViewer) charts.liveViewer.resize()
+                } else if (newTab === 'trend') {
+                    console.log('重绘趋势图表')
+                    if (charts.salesTrend) charts.salesTrend.resize()
+                    if (charts.amountTrend) charts.amountTrend.resize()
+                    if (charts.contentCount) charts.contentCount.resize()
+                    if (charts.userCount) charts.userCount.resize()
+                }
+            }, 100)
+        })
+        
+        // 解析中文数字格式（如 "100w-250w" -> 1500000）
+        const parseSalesNumber = (value) => {
+            if (!value) return 0
+            if (typeof value === 'number') return value
+            
+            const str = String(value).trim()
+            if (!str) return 0
+            
+            try {
+                // 处理范围格式，取平均值: '100w-250w' -> 175w
+                if (str.includes('-')) {
+                    const parts = str.split('-')
+                    const num1 = parseSalesNumber(parts[0])
+                    const num2 = parseSalesNumber(parts[1])
+                    return Math.floor((num1 + num2) / 2)
+                }
+                
+                // 处理加号: '1000+' -> 1000
+                const cleaned = str.replace('+', '')
+                
+                // 处理万: '100w' -> 1000000
+                if (cleaned.includes('w') || cleaned.includes('W') || cleaned.includes('万')) {
+                    const num = parseFloat(cleaned.replace(/[wW万]/g, ''))
+                    return Math.floor(num * 10000)
+                }
+                
+                // 处理千: '2.5k' -> 2500
+                if (cleaned.includes('k') || cleaned.includes('K') || cleaned.includes('千')) {
+                    const num = parseFloat(cleaned.replace(/[kK千]/g, ''))
+                    return Math.floor(num * 1000)
+                }
+                
+                // 直接转换为数字
+                return parseInt(cleaned) || 0
+            } catch {
+                return 0
+            }
+        }
+        
+        // 主题切换
+        onMounted(() => {
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                isDark.value = true
+                document.documentElement.classList.add('dark')
+            }
+            loadGoodsDetail()
+        })
+        
+        const toggleTheme = () => {
+            isDark.value = !isDark.value
+            if (isDark.value) {
+                document.documentElement.classList.add('dark')
+                localStorage.setItem('theme', 'dark')
+            } else {
+                document.documentElement.classList.remove('dark')
+                localStorage.setItem('theme', 'light')
+            }
+        }
+        
+        // 加载商品详情
+        const loadGoodsDetail = async () => {
+            const params = new URLSearchParams(window.location.search)
+            const productId = params.get('id')
+            
+            console.log('=== 加载商品详情 ===')
+            console.log('商品ID:', productId)
+            
+            if (!productId) {
+                error.value = '缺少商品ID参数'
+                loading.value = false
+                return
+            }
+            
+            try {
+                const token = localStorage.getItem('token')
+                console.log('Token:', token ? '存在' : '不存在')
+                
+                if (!token) {
+                    window.location.href = 'login.html'
+                    return
+                }
+                
+                const apiUrl = `http://localhost:5001/api/goods/detail/${productId}`
+                console.log('请求URL:', apiUrl)
+                
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                
+                console.log('响应状态:', response.status)
+                
+                const result = await response.json()
+                console.log('响应数据:', result)
+                
+                if (result.code === 0) {
+                    goods.value = result.data
+                    
+                    // 转换数值字段
+                    if (goods.value.price) goods.value.price = parseFloat(goods.value.price) || 0
+                    if (goods.value.coupon) goods.value.coupon = parseFloat(goods.value.coupon) || 0
+                    if (goods.value.cos_ratio) goods.value.cos_ratio = parseFloat(goods.value.cos_ratio) || 0
+                    if (goods.value.cos_fee) goods.value.cos_fee = parseFloat(goods.value.cos_fee) || 0
+                    
+                    // 处理可能是字符串的销量字段
+                    goods.value.sales = parseSalesNumber(goods.value.sales)
+                    goods.value.view_num = parseInt(goods.value.view_num) || 0
+                    goods.value.kol_num = parseSalesNumber(goods.value.kol_num)
+                    goods.value.order_num = parseSalesNumber(goods.value.order_num)
+                    goods.value.order_count = parseInt(goods.value.order_count) || 0
+                    goods.value.pay_amount = parseFloat(goods.value.pay_amount) || 0
+                    goods.value.service_fee = parseFloat(goods.value.service_fee) || 0
+                    
+                    // 解析JSON字段
+                    if (typeof goods.value.labels === 'string') {
+                        try {
+                            goods.value.labels = JSON.parse(goods.value.labels)
+                        } catch (e) {
+                            goods.value.labels = []
+                        }
+                    }
+                    
+                    // 更新页面标题
+                    document.title = `${goods.value.title} - 商品详情`
+                    console.log('✓ 商品详情加载成功')
+                    
+                    // 检查收藏状态
+                    checkFavorite(productId)
+
+                    // 延迟触发图表数据加载，确保图表已初始化
+                    setTimeout(() => {
+                        console.log('🎯 触发图表数据加载事件')
+                        window.dispatchEvent(new CustomEvent('goodsDetailLoaded', {
+                            detail: { productId: productId }
+                        }))
+                    }, 800)  // 延迟确保图表已初始化
+                } else {
+                    error.value = result.msg || '加载商品详情失败'
+                    console.error('✗ API返回错误:', result)
+                }
+            } catch (e) {
+                error.value = '网络错误：' + e.message
+                console.error('✗ 加载失败:', e)
+            } finally {
+                loading.value = false
+            }
+        }
+        
+        // ===== 收藏功能 =====
+        const checkFavorite = async (productId) => {
+            try {
+                const token = localStorage.getItem('token')
+                const res = await fetch(`http://localhost:5001/api/favorites/check?product_id=${productId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                if (data.code === 0) isFavorited.value = data.data.is_favorited
+            } catch (e) { /* ignore */ }
+        }
+
+        const toggleFavorite = async () => {
+            const productId = goods.value?.product_id
+            if (!productId) return
+            const token = localStorage.getItem('token')
+            const url = isFavorited.value
+                ? 'http://localhost:5001/api/favorites/remove'
+                : 'http://localhost:5001/api/favorites/add'
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: productId })
+                })
+                const data = await res.json()
+                if (data.code === 0) {
+                    isFavorited.value = !isFavorited.value
+                    window.Toast?.success(isFavorited.value ? '已收藏' : '已取消收藏')
+                } else {
+                    window.Toast?.error(data.msg || '操作失败')
+                }
+            } catch (e) {
+                window.Toast?.error('网络错误')
+            }
+        }
+
+        // ===== 分享功能 =====
+        const shareGoods = async () => {
+            const g = goods.value
+            if (!g) return
+            const shareData = {
+                title: g.title,
+                text: `${g.title} - 价格 ¥${g.price}`,
+                url: window.location.href
+            }
+            // 优先使用浏览器原生分享
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData)
+                    return
+                } catch (e) { /* 用户取消或不支持 */ }
+            }
+            // 回退：复制链接到剪贴板
+            try {
+                await navigator.clipboard.writeText(window.location.href)
+                window.Toast?.success('链接已复制到剪贴板')
+            } catch (e) {
+                // 兜底方案
+                const input = document.createElement('input')
+                input.value = window.location.href
+                document.body.appendChild(input)
+                input.select()
+                document.execCommand('copy')
+                document.body.removeChild(input)
+                window.Toast?.success('链接已复制到剪贴板')
+            }
+        }
+
+        // ===== 下载报告 =====
+        const downloadReport = () => {
+            const g = goods.value
+            if (!g) return
+
+            // 收集页面上的分析数据
+            const now = new Date().toLocaleString('zh-CN')
+            let csv = '\uFEFF' // BOM for Excel UTF-8
+            csv += '商品分析报告\n'
+            csv += `导出时间,${now}\n\n`
+
+            // 基本信息
+            csv += '【基本信息】\n'
+            csv += `商品名称,${g.title}\n`
+            csv += `商品ID,${g.product_id}\n`
+            csv += `价格,¥${g.price}\n`
+            csv += `佣金比例,${g.cos_ratio}%\n`
+            csv += `预估佣金,¥${g.cos_fee}\n`
+            csv += `店铺名称,${g.shop_name || '-'}\n`
+            csv += `总销量,${(g.sales || 0).toLocaleString()}\n`
+            csv += `浏览量,${(g.view_num || 0).toLocaleString()}\n`
+            csv += `带货达人,${(g.kol_num || 0).toLocaleString()}\n`
+            csv += `商品链接,${g.url || '-'}\n\n`
+
+            // 尝试从图表获取趋势数据
+            const trendChart = document.getElementById('salesTrendChart')
+            if (trendChart && trendChart.__chartInstance) {
+                const opt = trendChart.__chartInstance.getOption()
+                if (opt && opt.xAxis && opt.xAxis[0] && opt.series) {
+                    csv += '【销量趋势】\n'
+                    csv += '日期,销量\n'
+                    const dates = opt.xAxis[0].data || []
+                    const values = opt.series[0]?.data || []
+                    for (let i = 0; i < dates.length; i++) {
+                        csv += `${dates[i]},${values[i] || 0}\n`
+                    }
+                    csv += '\n'
+                }
+            }
+
+            // 下载文件
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `商品报告_${g.product_id}_${new Date().toISOString().slice(0,10)}.csv`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            window.Toast?.success('报告已下载')
+        }
+
+        // 返回上一页
+        const goBack = () => {
+            if (window.history.length > 1) {
+                window.history.back()
+            } else {
+                window.location.href = 'index.html'
+            }
+        }
+        
+        return {
+            loading,
+            error,
+            goods,
+            activeTab,
+            isDark,
+            isFavorited,
+            toggleTheme,
+            toggleFavorite,
+            shareGoods,
+            downloadReport,
+            goBack
+        }
+    }
+}).mount('#app')
+</script>
+
+<!-- AI 智能助手浮动组件 -->
+<div id="aiAssistant" v-cloak>
+    <!-- 浮动按钮 -->
+    <div class="ai-float-button" @click="toggleChat">
+        <span class="material-symbols-outlined icon">smart_toy</span>
+    </div>
+    
+    <!-- 聊天窗口 -->
+    <div v-if="showChat" class="ai-chat-window" :class="{ minimized: isMinimized }">
+        <!-- 头部 -->
+        <div class="ai-chat-header">
+            <div class="title">
+                <span class="material-symbols-outlined">smart_toy</span>
+                <span>AI 智能助手</span>
+            </div>
+            <div class="actions">
+                <div class="action-btn" @click.stop="isMinimized = !isMinimized">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">
+                        {{ isMinimized ? 'expand_more' : 'remove' }}
+                    </span>
+                </div>
+                <div class="action-btn" @click.stop="closeChat">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 消息区域 -->
+        <div v-show="!isMinimized" class="ai-chat-messages" ref="messagesContainer">
+            <!-- 欢迎消息 -->
+            <div v-if="messages.length === 0" class="ai-message">
+                <div class="avatar">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <div class="content">
+                    <div>你好！我是AI智能助手，可以帮你分析这个商品的数据、推荐类似商品。有什么我可以帮你的吗？</div>
+                </div>
+            </div>
+            
+            <!-- 聊天消息 -->
+            <div v-for="(msg, index) in messages" :key="index" class="ai-message" :class="msg.role">
+                <div class="avatar">
+                    <span class="material-symbols-outlined">
+                        {{ msg.role === 'user' ? 'person' : 'smart_toy' }}
+                    </span>
+                </div>
+                <div>
+                    <div class="content" v-html="formatMessage(msg.content)"></div>
+                    <div class="time">{{ formatTime(msg.time) }}</div>
+                </div>
+            </div>
+            
+            <!-- 加载中 -->
+            <div v-if="isLoading" class="ai-message">
+                <div class="avatar">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <div class="content">
+                    <div class="ai-typing">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快捷建议 -->
+        <div v-show="!isMinimized && messages.length === 0" class="ai-suggestions">
+            <div v-for="(suggestion, index) in suggestions" :key="index" 
+                 class="ai-suggestion-btn"
+                 @click="sendMessage(suggestion)">
+                {{ suggestion }}
+            </div>
+        </div>
+        
+        <!-- 输入区域 -->
+        <div v-show="!isMinimized" class="ai-chat-input">
+            <input 
+                v-model="inputMessage" 
+                @keyup.enter="sendMessage()"
+                placeholder="输入消息..."
+                :disabled="isLoading">
+            <button @click="sendMessage()" :disabled="isLoading || !inputMessage.trim()">
+                <span class="material-symbols-outlined">send</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* AI助手浮动按钮和窗口样式 */
+#aiAssistant {
+    position: relative;
+    z-index: 10000;
+}
+
+.ai-float-button {
+    position: fixed !important;
+    bottom: 30px !important;
+    right: 30px !important;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #13c8ec 0%, #0fa8c9 100%);
+    box-shadow: 0 4px 20px rgba(19, 200, 236, 0.4);
+    cursor: pointer;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    user-select: none;
+    /* 防止被其他元素影响 */
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.ai-float-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 30px rgba(19, 200, 236, 0.6);
+}
+
+.ai-float-button .icon {
+    font-size: 28px;
+    color: white;
+}
+
+.ai-chat-window {
+    position: fixed !important;
+    bottom: 100px !important;
+    right: 30px !important;
+    left: auto !important;
+    top: auto !important;
+    width: 400px !important;
+    height: 600px !important;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: height 0.3s ease;
+}
+
+.dark .ai-chat-window {
+    background: #1a3035;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.ai-chat-window.minimized {
+    height: 60px;
+}
+
+.ai-chat-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #13c8ec 0%, #0fa8c9 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+}
+
+.ai-chat-header .title {
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-chat-header .actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ai-chat-header .action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-chat-header .action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.ai-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f9fafb;
+}
+
+.dark .ai-chat-messages {
+    background: #16282b;
+}
+
+.ai-message {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ai-message.user {
+    flex-direction: row-reverse;
+}
+
+.ai-message .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #13c8ec;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.ai-message.user .avatar {
+    background: #8b5cf6;
+}
+
+.ai-message .content {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
+}
+
+.dark .ai-message .content {
+    background: #1a3035;
+    color: #e5e7eb;
+}
+
+.ai-message.user .content {
+    background: #13c8ec;
+    color: white;
+}
+
+.ai-message .time {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
+.ai-suggestions {
+    padding: 12px 20px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.dark .ai-suggestions {
+    background: #1a3035;
+    border-top-color: #325e67;
+}
+
+.ai-suggestions::-webkit-scrollbar {
+    height: 4px;
+}
+
+.ai-suggestion-btn {
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border-radius: 16px;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark .ai-suggestion-btn {
+    background: #192f33;
+    color: #a0c4cc;
+}
+
+.ai-suggestion-btn:hover {
+    background: #13c8ec;
+    color: white;
+}
+
+.ai-chat-input {
+    padding: 16px 20px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.dark .ai-chat-input {
+    background: #1a3035;
+    border-top-color: #325e67;
+}
+
+.ai-chat-input input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    outline: none;
+    font-size: 14px;
+    background: #f9fafb;
+}
+
+.dark .ai-chat-input input {
+    background: #16282b;
+    border-color: #325e67;
+    color: white;
+}
+
+.ai-chat-input input:focus {
+    border-color: #13c8ec;
+}
+
+.ai-chat-input button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #13c8ec;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ai-chat-input button:hover {
+    background: #0fa8c9;
+    transform: scale(1.05);
+}
+
+.ai-chat-input button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ai-typing {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+}
+
+.ai-typing span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #13c8ec;
+    animation: typing 1.4s infinite;
+}
+
+.ai-typing span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.ai-typing span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-10px);
+    }
+}
+
+@media (max-width: 768px) {
+    .ai-chat-window {
+        width: calc(100vw - 40px);
+        height: calc(100vh - 140px);
+        right: 20px;
+        bottom: 90px;
+    }
+}
+</style>
+
+<script>
+// AI助手组件
+const { createApp: createAIApp } = Vue
+
+createAIApp({
+    data() {
+        return {
+            showChat: false,
+            isMinimized: false,
+            messages: [],
+            inputMessage: '',
+            isLoading: false,
+            sessionId: '',
+            suggestions: [
+                "分析这个商品的销量趋势",
+                "推荐类似的商品",
+                "这个商品的佣金怎么样？",
+                "同类商品对比分析",
+                "如何提高这个商品的转化率？",
+                "这个商品适合什么人群？"
+            ]
+        }
+    },
+    mounted() {
+        this.sessionId = localStorage.getItem('ai_session_id') || this.generateSessionId()
+        localStorage.setItem('ai_session_id', this.sessionId)
+        this.loadHistory()
+    },
+    beforeUnmount() {
+        // No cleanup needed
+    },
+    methods: {
+        generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+        },
+        
+        async loadHistory() {
+            try {
+                const token = localStorage.getItem('token')
+                const response = await fetch(`http://localhost:5001/api/ai/history?session_id=${this.sessionId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const result = await response.json()
+                if (result.success && result.data.length > 0) {
+                    this.messages = result.data.map(msg => ({
+                        role: msg.role,
+                        content: msg.content,
+                        time: new Date()
+                    }))
+                    this.$nextTick(() => {
+                        this.scrollToBottom()
+                    })
+                }
+            } catch (e) {
+                console.error('加载历史失败:', e)
+            }
+        },
+        
+        async sendMessage(text) {
+            const message = text || this.inputMessage.trim()
+            if (!message || this.isLoading) return
+            
+            this.messages.push({
+                role: 'user',
+                content: message,
+                time: new Date()
+            })
+            
+            this.inputMessage = ''
+            this.isLoading = true
+            
+            // 添加空的AI消息用于流式更新
+            const aiMessageIndex = this.messages.length
+            this.messages.push({
+                role: 'assistant',
+                content: '',
+                time: new Date()
+            })
+            
+            this.$nextTick(() => {
+                this.scrollToBottom()
+            })
+            
+            try {
+                const token = localStorage.getItem('token')
+                
+                // 获取当前页面的商品ID
+                const params = new URLSearchParams(window.location.search)
+                const productId = params.get('id')
+                
+                const requestBody = {
+                    message: message,
+                    session_id: this.sessionId
+                }
+                
+                // 如果有商品ID，添加到请求中
+                if (productId) {
+                    requestBody.product_id = productId
+                }
+                
+                const response = await fetch('http://localhost:5001/api/ai/chat/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(requestBody)
+                })
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`)
+                }
+                
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+                let buffer = ''
+                
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    
+                    buffer += decoder.decode(value, { stream: true })
+                    const lines = buffer.split('\n')
+                    buffer = lines.pop() // 保留不完整的行
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim()
+                            if (data === '[DONE]') {
+                                break
+                            }
+                            
+                            try {
+                                const parsed = JSON.parse(data)
+                                if (parsed.content) {
+                                    this.messages[aiMessageIndex].content += parsed.content
+                                    this.$nextTick(() => {
+                                        this.scrollToBottom()
+                                    })
+                                } else if (parsed.error) {
+                                    throw new Error(parsed.error)
+                                }
+                            } catch (e) {
+                                console.error('Parse error:', e)
+                            }
+                        }
+                    }
+                }
+                
+            } catch (e) {
+                console.error('发送消息失败:', e)
+                this.messages[aiMessageIndex].content = '抱歉，我遇到了一些问题。请稍后再试。'
+            } finally {
+                this.isLoading = false
+            }
+        },
+        
+        formatMessage(content) {
+            return content
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        },
+        
+        formatTime(time) {
+            const now = new Date()
+            const diff = now - time
+            
+            if (diff < 60000) return '刚刚'
+            if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+            
+            return time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        },
+        
+        scrollToBottom() {
+            if (this.$refs.messagesContainer) {
+                this.$refs.messagesContainer.scrollTop = this.$refs.messagesContainer.scrollHeight
+            }
+        },
+        
+        toggleChat() {
+            this.showChat = !this.showChat
+            if (this.showChat) {
+                this.$nextTick(() => {
+                    this.scrollToBottom()
+                })
+            }
+        },
+        
+        closeChat() {
+            this.showChat = false
+        }
+    }
+}).mount('#aiAssistant')
+</script>
+
+</body>
+</html>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+// 等待Vue完全挂载后再初始化图表
+window.addEventListener('load', () => {
+    console.log('📄 页面完全加载')
+    // 等待Vue挂载和渲染完成
+    setTimeout(() => {
+        console.log('⏰ 开始初始化图表...')
+        initCharts()
+        console.log('✅ 图表初始化完成，等待数据加载')
+    }, 500)
+})
+
+let charts = {}
+
+function initCharts() {
+    console.log('🎨 初始化图表...')
+    const isDarkMode = document.documentElement.classList.contains('dark')
+    const textColor = isDarkMode ? '#a0c4cc' : '#6b7280'
+    const bgColor = 'transparent'  // 使用透明背景，让容器背景显示
+    const gridColor = isDarkMode ? '#2a454a' : '#e7f1f3'
+    
+    console.log('🎨 暗色模式:', isDarkMode)
+    console.log('🎨 背景色:', bgColor)
+    console.log('🎨 文字色:', textColor)
+    
+    // 基础分析 - 销量趋势图
+    const salesTrendEl = document.getElementById('salesTrendChart')
+    if (salesTrendEl) {
+        console.log('✓ 找到销量趋势图容器, 尺寸:', salesTrendEl.offsetWidth, 'x', salesTrendEl.offsetHeight)
+        charts.salesTrend = echarts.init(salesTrendEl)
+        salesTrendEl.__chartInstance = charts.salesTrend
+        charts.salesTrend.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true,
+                borderColor: gridColor
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { show: false }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#13c8ec' },
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(19, 200, 236, 0.3)' },
+                        { offset: 1, color: 'rgba(19, 200, 236, 0.05)' }
+                    ])
+                }
+            }]
+        })
+    }
+    
+    // 基础分析 - 销售额趋势图
+    if (document.getElementById('amountTrendChart')) {
+        console.log('✓ 初始化销售额趋势图')
+        charts.amountTrend = echarts.init(document.getElementById('amountTrendChart'))
+        charts.amountTrend.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { color: '#10b981' },
+                barWidth: '60%'
+            }]
+        })
+    }
+    
+    // 基础分析 - 视频&直播数量
+    if (document.getElementById('contentCountChart')) {
+        console.log('✓ 初始化内容数量图')
+        charts.contentCount = echarts.init(document.getElementById('contentCountChart'))
+        charts.contentCount.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            legend: {
+                data: ['视频数', '直播数'],
+                textStyle: { color: textColor },
+                top: 0
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [
+                {
+                    name: '视频数',
+                    data: [],
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: { color: '#06b6d4' },
+                    lineStyle: { width: 2 }
+                },
+                {
+                    name: '直播数',
+                    data: [],
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: { color: '#ef4444' },
+                    lineStyle: { width: 2 }
+                }
+            ]
+        })
+    }
+    
+    // 基础分析 - 达人数量
+    if (document.getElementById('userCountChart')) {
+        console.log('✓ 初始化达人数量图')
+        charts.userCount = echarts.init(document.getElementById('userCountChart'))
+        charts.userCount.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#8b5cf6' },
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(139, 92, 246, 0.3)' },
+                        { offset: 1, color: 'rgba(139, 92, 246, 0.05)' }
+                    ])
+                }
+            }]
+        })
+    }
+    
+    // 基础分析 - 销售额&浏览量图（保留原有的）
+    if (document.getElementById('amountViewChart')) {
+        console.log('✓ 初始化销售额&浏览量图')
+        charts.amountView = echarts.init(document.getElementById('amountViewChart'))
+        charts.amountView.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            legend: {
+                data: ['销售额', '浏览量'],
+                textStyle: { color: textColor },
+                top: 0
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '销售额',
+                    nameTextStyle: { color: textColor },
+                    axisLabel: { color: textColor, fontSize: 10 },
+                    axisLine: { lineStyle: { color: gridColor } },
+                    splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+                },
+                {
+                    type: 'value',
+                    name: '浏览量',
+                    nameTextStyle: { color: textColor },
+                    axisLabel: { color: textColor, fontSize: 10 },
+                    axisLine: { lineStyle: { color: gridColor } },
+                    splitLine: { show: false }
+                }
+            ],
+            series: [
+                {
+                    name: '销售额',
+                    data: [],
+                    type: 'bar',
+                    itemStyle: { color: '#10b981' }
+                },
+                {
+                    name: '浏览量',
+                    data: [],
+                    type: 'line',
+                    yAxisIndex: 1,
+                    itemStyle: { color: '#f59e0b' },
+                    lineStyle: { width: 2 }
+                }
+            ]
+        })
+    }
+    
+    // 达人分析 - 每日达人带货
+    if (document.getElementById('kolDailyChart')) {
+        console.log('✓ 初始化达人带货图')
+        charts.kolDaily = echarts.init(document.getElementById('kolDailyChart'))
+        charts.kolDaily.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { color: '#8b5cf6' },
+                barWidth: '60%'
+            }]
+        })
+        console.log('✓ kolDaily图表对象:', charts.kolDaily)
+    } else {
+        console.error('❌ 找不到 kolDailyChart 元素')
+    }
+    
+    // 达人分析 - 新增达人
+    if (document.getElementById('kolNewChart')) {
+        console.log('✓ 初始化新增达人图')
+        charts.kolNew = echarts.init(document.getElementById('kolNewChart'))
+        charts.kolNew.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#ec4899' },
+                lineStyle: { width: 2 }
+            }]
+        })
+        console.log('✓ kolNew图表对象:', charts.kolNew)
+    } else {
+        console.error('❌ 找不到 kolNewChart 元素')
+    }
+    
+    // 达人分析 - TOP达人销量排行
+    if (document.getElementById('kolTopSalesChart')) {
+        console.log('✓ 初始化达人TOP排行图')
+        charts.kolTopSales = echarts.init(document.getElementById('kolTopSalesChart'))
+        charts.kolTopSales.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            yAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { 
+                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                        { offset: 0, color: '#8b5cf6' },
+                        { offset: 1, color: '#ec4899' }
+                    ])
+                },
+                barWidth: '60%'
+            }]
+        })
+    }
+    
+    // 达人分析 - 粉丝数分布
+    if (document.getElementById('kolFollowerChart')) {
+        console.log('✓ 初始化达人粉丝分布图')
+        charts.kolFollower = echarts.init(document.getElementById('kolFollowerChart'))
+        charts.kolFollower.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { color: '#ec4899' },
+                barWidth: '60%'
+            }]
+        })
+    }
+    
+    // 视频分析 - 视频数量
+    if (document.getElementById('videoCountChart')) {
+        charts.videoCount = echarts.init(document.getElementById('videoCountChart'))
+        charts.videoCount.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { color: '#06b6d4' },
+                barWidth: '60%'
+            }]
+        })
+    }
+    
+    // 视频分析 - 播放量
+    if (document.getElementById('videoViewsChart')) {
+        charts.videoViews = echarts.init(document.getElementById('videoViewsChart'))
+        charts.videoViews.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#f97316' },
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(249, 115, 22, 0.3)' },
+                        { offset: 1, color: 'rgba(249, 115, 22, 0.05)' }
+                    ])
+                }
+            }]
+        })
+    }
+    
+    // 视频分析 - 视频销量
+    if (document.getElementById('videoSalesChart')) {
+        console.log('✓ 初始化视频销量图')
+        charts.videoSales = echarts.init(document.getElementById('videoSalesChart'))
+        charts.videoSales.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#10b981' },
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+                        { offset: 1, color: 'rgba(16, 185, 129, 0.05)' }
+                    ])
+                }
+            }]
+        })
+    }
+    
+    // 视频分析 - 互动数据（点赞、评论）
+    if (document.getElementById('videoEngagementChart')) {
+        console.log('✓ 初始化视频互动图')
+        charts.videoEngagement = echarts.init(document.getElementById('videoEngagementChart'))
+        charts.videoEngagement.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            legend: {
+                data: ['点赞数', '评论数'],
+                textStyle: { color: textColor },
+                top: 0
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [
+                {
+                    name: '点赞数',
+                    data: [],
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: { color: '#f59e0b' },
+                    lineStyle: { width: 2 }
+                },
+                {
+                    name: '评论数',
+                    data: [],
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: { color: '#06b6d4' },
+                    lineStyle: { width: 2 }
+                }
+            ]
+        })
+    }
+    
+    // 直播分析 - 直播场次
+    if (document.getElementById('liveCountChart')) {
+        charts.liveCount = echarts.init(document.getElementById('liveCountChart'))
+        charts.liveCount.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { color: '#ef4444' },
+                barWidth: '60%'
+            }]
+        })
+    }
+    
+    // 直播分析 - 直播销量
+    if (document.getElementById('liveSalesChart')) {
+        charts.liveSales = echarts.init(document.getElementById('liveSalesChart'))
+        charts.liveSales.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#14b8a6' },
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(20, 184, 166, 0.3)' },
+                        { offset: 1, color: 'rgba(20, 184, 166, 0.05)' }
+                    ])
+                }
+            }]
+        })
+    }
+    
+    // 直播分析 - 直播销售额
+    if (document.getElementById('liveAmountChart')) {
+        console.log('✓ 初始化直播销售额图')
+        charts.liveAmount = echarts.init(document.getElementById('liveAmountChart'))
+        charts.liveAmount.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                itemStyle: { color: '#10b981' },
+                barWidth: '60%'
+            }]
+        })
+    }
+    
+    // 直播分析 - 观看人数
+    if (document.getElementById('liveViewerChart')) {
+        console.log('✓ 初始化直播观看人数图')
+        charts.liveViewer = echarts.init(document.getElementById('liveViewerChart'))
+        charts.liveViewer.setOption({
+            backgroundColor: bgColor,
+            tooltip: { 
+                trigger: 'axis',
+                backgroundColor: isDarkMode ? '#1a2e32' : '#ffffff',
+                borderColor: gridColor,
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: [],
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor, fontSize: 10 },
+                axisLine: { lineStyle: { color: gridColor } },
+                splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+            },
+            series: [{
+                data: [],
+                type: 'line',
+                smooth: true,
+                itemStyle: { color: '#f59e0b' },
+                lineStyle: { width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(245, 158, 11, 0.3)' },
+                        { offset: 1, color: 'rgba(245, 158, 11, 0.05)' }
+                    ])
+                }
+            }]
+        })
+    }
+    
+    console.log('✅ 所有图表初始化完成')
+}
+
+// ============================================
+// 实时更新功能
+// ============================================
+let chartRefreshInterval = null
+let lastRefreshTime = null
+const REFRESH_INTERVAL = 30000  // 30秒刷新一次
+
+function startChartAutoRefresh(productId) {
+    console.log('🔄 启动图表自动刷新...')
+
+    // 清除之前的定时器
+    if (chartRefreshInterval) {
+        clearInterval(chartRefreshInterval)
+    }
+
+    // 立即加载一次
+    loadChartData(productId)
+
+    // 设置定时器，每30秒刷新一次
+    chartRefreshInterval = setInterval(() => {
+        console.log('⏰ 触发自动刷新...')
+        loadChartData(productId)
+    }, REFRESH_INTERVAL)
+
+    console.log('✅ 图表自动刷新已启动，更新频率: 30秒')
+}
+
+function stopChartAutoRefresh() {
+    console.log('⏹️ 停止图表自动刷新...')
+    if (chartRefreshInterval) {
+        clearInterval(chartRefreshInterval)
+        chartRefreshInterval = null
+        console.log('✅ 图表自动刷新已停止')
+    }
+}
+
+// 在 Vue 的 setup 中添加清理函数
+window.stopChartRefresh = stopChartAutoRefresh
+
+// 加载图表数据
+async function loadChartData(productId) {
+    const token = localStorage.getItem('token')
+    if (!token || !productId) {
+        console.log('❌ 缺少token或productId')
+        return
+    }
+
+    console.log('📊 开始加载图表数据...', productId)
+    lastRefreshTime = new Date().toLocaleTimeString('zh-CN')
+    
+    try {
+        // 加载趋势数据
+        console.log('⏳ 加载趋势数据...')
+        const trendRes = await fetch(`http://localhost:5001/api/goods/analysis/trend/${productId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (!trendRes.ok) {
+            console.error(`❌ 趋势数据API返回状态码: ${trendRes.status}`)
+            throw new Error(`API请求失败: ${trendRes.status}`)
+        }
+
+        const trendData = await trendRes.json()
+        console.log('✓ 趋势数据:', trendData)
+
+        if (!trendData || trendData.code !== 0) {
+            console.warn('⚠️ 趋势数据为空或加载失败:', trendData?.msg || '未知错误')
+            throw new Error('趋势数据加载失败: ' + (trendData?.msg || '未知错误'))
+        }
+
+        if (trendData.code === 0 && trendData.data) {
+            // 销量趋势图
+            if (charts.salesTrend) {
+                charts.salesTrend.setOption({
+                    xAxis: { data: trendData.data.dates },
+                    series: [{ data: trendData.data.sales }]
+                })
+            }
+            
+            // 销售额趋势图
+            if (charts.amountTrend) {
+                charts.amountTrend.setOption({
+                    xAxis: { data: trendData.data.dates },
+                    series: [{ data: trendData.data.amount }]
+                })
+            }
+            
+            // 视频&直播数量图（从趋势数据中获取）
+            if (charts.contentCount && trendData.data.video_count && trendData.data.live_count) {
+                charts.contentCount.setOption({
+                    xAxis: { data: trendData.data.dates },
+                    series: [
+                        { data: trendData.data.video_count },
+                        { data: trendData.data.live_count }
+                    ]
+                })
+            }
+            
+            // 达人数量图
+            if (charts.userCount && trendData.data.user_count) {
+                charts.userCount.setOption({
+                    xAxis: { data: trendData.data.dates },
+                    series: [{ data: trendData.data.user_count }]
+                })
+            }
+        }
+        
+        // 加载达人数据
+        console.log('⏳ 加载达人数据...')
+        const kolRes = await fetch(`http://localhost:5001/api/goods/analysis/kol/${productId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const kolData = await kolRes.json()
+        console.log('✓ 达人数据:', kolData)
+        if (kolData.code === 0) {
+            // 每日达人带货视频数
+            if (charts.kolDaily) {
+                charts.kolDaily.setOption({
+                    xAxis: { data: kolData.data.dates },
+                    series: [{ data: kolData.data.daily_kol }]
+                })
+            }
+            // 新增达人数
+            if (charts.kolNew) {
+                charts.kolNew.setOption({
+                    xAxis: { data: kolData.data.dates },
+                    series: [{ data: kolData.data.new_kol }]
+                })
+            }
+            // TOP达人销量排行
+            if (charts.kolTopSales && kolData.data.top_names) {
+                charts.kolTopSales.setOption({
+                    yAxis: { data: kolData.data.top_names.slice().reverse() },
+                    series: [{ data: kolData.data.top_sales.slice().reverse() }]
+                })
+            }
+            // 达人粉丝数分布
+            if (charts.kolFollower && kolData.data.top_names) {
+                charts.kolFollower.setOption({
+                    xAxis: { data: kolData.data.top_names.slice(0, 10) },
+                    series: [{ data: kolData.data.top_followers.slice(0, 10) }]
+                })
+            }
+            // 强制重绘
+            setTimeout(() => {
+                if (charts.kolDaily) charts.kolDaily.resize()
+                if (charts.kolNew) charts.kolNew.resize()
+                if (charts.kolTopSales) charts.kolTopSales.resize()
+                if (charts.kolFollower) charts.kolFollower.resize()
+            }, 100)
+        }
+        
+        // 加载视频数据
+        console.log('⏳ 加载视频数据...', `productId=${productId}`)
+        const videoRes = await fetch(`http://localhost:5001/api/goods/analysis/video/${productId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (!videoRes.ok) {
+            console.error(`❌ 视频API返回状态码: ${videoRes.status}`)
+        }
+
+        const videoData = await videoRes.json()
+        console.log('✓ 视频数据响应:', videoData)
+
+        if (videoData.code !== 0) {
+            console.warn('⚠️ 视频数据加载失败:', videoData.msg)
+        }
+        if (videoData.code === 0) {
+            // 每日视频数量
+            if (charts.videoCount) {
+                charts.videoCount.setOption({
+                    xAxis: { data: videoData.data.dates },
+                    series: [{ data: videoData.data.video_count }]
+                })
+            }
+            // 视频播放量
+            if (charts.videoViews) {
+                charts.videoViews.setOption({
+                    xAxis: { data: videoData.data.dates },
+                    series: [{ data: videoData.data.video_views }]
+                })
+            }
+            // 视频销量
+            if (charts.videoSales) {
+                charts.videoSales.setOption({
+                    xAxis: { data: videoData.data.dates },
+                    series: [{ data: videoData.data.video_sales }]
+                })
+            }
+            // 视频互动数据
+            if (charts.videoEngagement) {
+                charts.videoEngagement.setOption({
+                    xAxis: { data: videoData.data.dates },
+                    series: [
+                        { data: videoData.data.like_count },
+                        { data: videoData.data.comment_count }
+                    ]
+                })
+            }
+            // 强制重绘
+            setTimeout(() => {
+                if (charts.videoCount) charts.videoCount.resize()
+                if (charts.videoViews) charts.videoViews.resize()
+                if (charts.videoSales) charts.videoSales.resize()
+                if (charts.videoEngagement) charts.videoEngagement.resize()
+            }, 100)
+        }
+        
+        // 加载直播数据
+        console.log('⏳ 加载直播数据...', `productId=${productId}`)
+        const liveRes = await fetch(`http://localhost:5001/api/goods/analysis/live/${productId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (!liveRes.ok) {
+            console.error(`❌ 直播API返回状态码: ${liveRes.status}`)
+            throw new Error(`直播数据API失败: ${liveRes.status}`)
+        }
+
+        const liveData = await liveRes.json()
+        console.log('✓ 直播数据响应:', liveData)
+
+        if (!liveData) {
+            console.error('❌ 直播数据响应为null')
+            throw new Error('直播数据响应为空')
+        }
+
+        if (liveData.code !== 0) {
+            console.warn('⚠️ 直播数据加载失败:', liveData.msg)
+            console.warn('完整响应:', liveData)
+            // 不中断，继续处理其他数据
+        } else {
+            console.log('✓ 直播数据代码: 0，准备更新图表')
+        }
+
+        if (liveData.code === 0 && liveData.data && Array.isArray(liveData.data.dates)) {
+            // 每日直播场次
+            if (charts.liveCount) {
+                charts.liveCount.setOption({
+                    xAxis: { data: liveData.data.dates },
+                    series: [{ data: liveData.data.live_count }]
+                })
+            }
+            // 直播销量
+            if (charts.liveSales) {
+                charts.liveSales.setOption({
+                    xAxis: { data: liveData.data.dates },
+                    series: [{ data: liveData.data.live_sales }]
+                })
+            }
+            // 直播销售额
+            if (charts.liveAmount) {
+                charts.liveAmount.setOption({
+                    xAxis: { data: liveData.data.dates },
+                    series: [{ data: liveData.data.live_amount }]
+                })
+            }
+            // 直播观看人数
+            if (charts.liveViewer) {
+                charts.liveViewer.setOption({
+                    xAxis: { data: liveData.data.dates },
+                    series: [{ data: liveData.data.live_viewer }]
+                })
+            }
+            // 强制重绘
+            setTimeout(() => {
+                if (charts.liveCount) charts.liveCount.resize()
+                if (charts.liveSales) charts.liveSales.resize()
+                if (charts.liveAmount) charts.liveAmount.resize()
+                if (charts.liveViewer) charts.liveViewer.resize()
+            }, 100)
+        }
+        
+        console.log('✅ 所有图表数据加载完成')
+        updateRefreshTimeDisplay()
+    } catch (e) {
+        console.error('❌ 加载图表数据失败:', e.message || e)
+        console.error('完整错误:', e)
+        const timeEl = document.getElementById('updateTimeText')
+        if (timeEl) {
+            timeEl.textContent = `加载失败: ${e.message || '未知错误'}`
+        }
+        // 在页面上显示错误信息
+        const errorDiv = document.createElement('div')
+        errorDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#ff4444;color:white;padding:15px;border-radius:5px;z-index:9999;font-size:14px;max-width:300px'
+        errorDiv.innerHTML = `<strong>数据加载失败</strong><br>${e.message || '未知错误'}<br><small>请检查后端服务是否运行正常</small>`
+        document.body.appendChild(errorDiv)
+        setTimeout(() => errorDiv.remove(), 10000)
+    }
+}
+
+// 更新时间显示
+function updateRefreshTimeDisplay() {
+    const timeEl = document.getElementById('updateTimeText')
+    if (timeEl && lastRefreshTime) {
+        timeEl.textContent = `最后更新: ${lastRefreshTime}`
+    }
+}
+
+// 处理手动刷新按钮
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('refreshChartBtn')
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            console.log('🔄 用户点击手动刷新')
+            refreshBtn.classList.add('refreshing')
+
+            // 获取当前商品ID
+            const params = new URLSearchParams(window.location.search)
+            const productId = params.get('id')
+
+            if (productId) {
+                await loadChartData(productId)
+                updateRefreshTimeDisplay()
+            }
+
+            // 300ms后移除旋转动画
+            setTimeout(() => {
+                refreshBtn.classList.remove('refreshing')
+            }, 300)
+        })
+    }
+})
+
+// 监听商品详情加载完成事件
+window.addEventListener('goodsDetailLoaded', (e) => {
+    console.log('📌 商品详情加载完成，启动自动刷新')
+    startChartAutoRefresh(e.detail.productId)
+
+    // 初始更新时间显示
+    setTimeout(() => {
+        updateRefreshTimeDisplay()
+    }, 500)
+})
+
+// 监听页面卸载事件，停止自动刷新
+window.addEventListener('beforeunload', () => {
+    stopChartAutoRefresh()
+})
+</script>

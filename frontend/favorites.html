@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>我的收藏 - 抖音电商分析系统</title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/fonts.css?v=5" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/utils.js?v=1"></script>
+    <script>
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#13c8ec", "background-dark": "#101f22", "surface-dark": "#16282b", "card-dark": "#1a3035", "input-bg": "#192f33", "input-border": "#325e67", "text-secondary": "#92c0c9" }, fontFamily: { "sans": ["Inter", "Noto Sans SC", "sans-serif"] } } } }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #111f22; } ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
+        .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
+        [v-cloak] { display: none !important; }
+        html:not(.dark) .bg-surface-dark { background-color: #fff !important; } html:not(.dark) .bg-card-dark { background-color: #fff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; } html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; } html:not(.dark) .text-white { color: #111827 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        body, * { font-family: "Inter", "Noto Sans SC", -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
+<div id="app" class="flex h-screen" v-cloak>
+    <aside class="w-64 bg-white dark:bg-surface-dark border-r border-gray-200 dark:border-input-border flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary text-xl">analytics</span></div>
+                <span class="font-bold text-lg">数据分析系统</span>
+            </div>
+        </div>
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
+            <a href="index.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">home</span>首页</a>
+            <a href="dashboard.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">dashboard</span>数据仪表盘</a>
+            <a href="prediction.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">trending_up</span>热点预测</a>
+            <a href="compare.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">compare_arrows</span>商品对比</a>
+            <a href="favorites.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary"><span class="material-symbols-outlined text-xl">favorite</span>我的收藏</a>
+            <a href="ai_assistant.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">smart_toy</span>AI 智能助手</a>
+            <a v-if="hasCrawlerPerm" href="crawler.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">bug_report</span>爬虫任务</a>
+            <a href="settings.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">settings</span>{{ isAdmin ? '系统设置' : '个人中心' }}</a>
+        </nav>
+        <div class="p-4 border-t border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary">person</span></div>
+                <div class="flex-1 min-w-0"><div class="text-sm font-medium truncate">{{ user?.nickname || user?.username }}</div><div class="text-xs text-text-secondary">{{ user?.roles?.[0]?.name || '用户' }}</div></div>
+                <button @click="handleLogout" class="p-2 hover:bg-input-bg rounded-lg"><span class="material-symbols-outlined text-text-secondary hover:text-red-400">logout</span></button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-input-border flex items-center justify-between px-6">
+            <h1 class="text-xl font-semibold">我的收藏 <span class="text-sm text-text-secondary font-normal ml-2">共 {{ total }} 件商品</span></h1>
+            <button @click="loadFavorites" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm hover:border-primary flex items-center gap-1">
+                <span class="material-symbols-outlined text-base">refresh</span>刷新
+            </button>
+        </header>
+        <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-background-dark">
+            <div v-if="favorites.length === 0" class="text-center py-20 text-text-secondary">
+                <span class="material-symbols-outlined text-6xl mb-4 block">favorite_border</span>
+                <p>暂无收藏商品</p>
+                <p class="text-sm mt-2">在首页商品列表中点击收藏按钮添加</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="item in favorites" :key="item.product_id"
+                     class="bg-white dark:bg-card-dark rounded-xl border border-gray-200 dark:border-input-border overflow-hidden hover:border-primary/50 transition-colors">
+                    <div class="flex items-start p-4 gap-4">
+                        <img :src="item.cover" class="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><rect fill=%22%23325e67%22 width=%2280%22 height=%2280%22/></svg>'"/>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-medium truncate mb-1">{{ item.title || '未知商品' }}</h4>
+                            <div class="text-xs text-text-secondary mb-2">{{ item.shop_name || '' }}</div>
+                            <div class="flex items-center gap-3 text-xs">
+                                <span class="text-primary font-bold">&yen;{{ item.price || 0 }}</span>
+                                <span class="text-text-secondary">佣金 &yen;{{ item.cos_fee || 0 }}</span>
+                                <span class="text-text-secondary">销量 {{ item.sales || 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex border-t border-input-border/50">
+                        <a :href="'goods_detail.html?id=' + item.product_id"
+                           class="flex-1 py-2 text-center text-xs text-text-secondary hover:text-primary hover:bg-input-bg/50 transition-colors">
+                            查看详情
+                        </a>
+                        <button @click="removeFavorite(item.product_id)"
+                                class="flex-1 py-2 text-center text-xs text-red-400 hover:bg-red-500/10 transition-colors border-l border-input-border/50">
+                            取消收藏
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- 分页 -->
+            <div v-if="totalPages > 1" class="flex justify-center mt-6 gap-2">
+                <button v-for="p in totalPages" :key="p" @click="page = p; loadFavorites()"
+                        :class="p === page ? 'bg-primary text-background-dark' : 'bg-input-bg text-text-secondary hover:border-primary'"
+                        class="w-9 h-9 rounded-lg text-sm border border-input-border">{{ p }}</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+<script>
+const API_BASE = 'http://localhost:5001/api'
+const { createApp, ref, computed, onMounted } = Vue
+
+createApp({
+    setup() {
+        const user = ref(null)
+        const isAdmin = ref(false)
+        const hasCrawlerPerm = ref(false)
+        const favorites = ref([])
+        const total = ref(0)
+        const page = ref(1)
+        const pageSize = 12
+        const totalPages = computed(() => Math.ceil(total.value / pageSize))
+
+        function getToken() { return localStorage.getItem('token') }
+        async function apiFetch(url, options = {}) {
+            const token = getToken()
+            if (!token) { window.location.href = 'login.html'; return }
+            const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
+            const res = await fetch(`${API_BASE}${url}`, { ...options, headers })
+            return await res.json()
+        }
+
+        async function loadFavorites() {
+            const res = await apiFetch(`/favorites/list?page=${page.value}&page_size=${pageSize}`)
+            if (res.code === 0) {
+                favorites.value = res.data.list
+                total.value = res.data.total
+            }
+        }
+
+        async function removeFavorite(productId) {
+            const res = await apiFetch('/favorites/remove', { method: 'POST', body: JSON.stringify({ product_id: productId }) })
+            if (res.code === 0) {
+                window.Toast?.success('已取消收藏')
+                loadFavorites()
+            }
+        }
+
+        function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'login.html' }
+
+        onMounted(() => {
+            const token = getToken()
+            if (!token) { window.location.href = 'login.html'; return }
+            const savedUser = localStorage.getItem('user')
+            if (savedUser) {
+                user.value = JSON.parse(savedUser)
+            const roleCodes = user.value.roles?.map(r => r.code) || []
+            isAdmin.value = roleCodes.includes('admin')
+                hasCrawlerPerm.value = (user.value.permissions || []).includes('crawler:start')
+            }
+            loadFavorites()
+        })
+
+        return { user, hasCrawlerPerm, favorites, total, page, totalPages, loadFavorites, removeFavorite, handleLogout }
+    }
+}).mount('#app')
+</script>
+</body>
+</html>

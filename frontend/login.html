@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>抖音电商热点数据可视化分析系统 - 登录</title>
+    <link href="css/fonts.css" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="js/toast.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "Noto Sans SC", "sans-serif"],
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111f22; }
+        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-background-dark min-h-screen flex flex-col">
+    
+<div id="app">
+    <div class="relative flex min-h-screen w-full flex-col justify-center overflow-hidden py-6 sm:py-12">
+        <!-- 背景 -->
+        <div class="absolute inset-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2832&auto=format&fit=crop')] bg-cover bg-center opacity-10 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background-light via-background-light/95 to-background-light/80 dark:from-background-dark dark:via-background-dark/95 dark:to-background-dark/80 pointer-events-none"></div>
+        
+        <div class="relative w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 flex-grow flex items-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 w-full overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#325e67]/30">
+                
+                <!-- 左侧品牌区 -->
+                <div class="relative hidden lg:flex flex-col justify-between p-12 bg-cover bg-center overflow-hidden" 
+                     style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCp5OkA5zghmgDF50ad7tULP9DAHcB_urIlBrqu_GWRcv6ctWGz_RXPu-av0UrDN5Ptzmums5WzrP_RqM_KlVX2AWYwnqjBJBAsNwLc0i_QeRnhb98gKyOJU7iCtN-sDNYLE7uyRqYAFn6cCG4FeqnI8S2IqxrZhxxbX2B92nWU1Ft5sQL7WpnwTi4upuHSLz4_vp--GK6KayVFtugUXyF0bQYRdE5n53Aig4WtLxCcz6DYaOAJY3BeIdU3LEyewFBRw2XCGtsMscvv');">
+                    <div class="absolute inset-0 bg-gradient-to-br from-[#111f22]/90 via-[#111f22]/70 to-primary/20 mix-blend-multiply"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#111f22] via-transparent to-transparent"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary">
+                                <span class="material-symbols-outlined text-2xl">analytics</span>
+                            </div>
+                            <span class="text-white font-bold text-lg tracking-wide uppercase opacity-90">Data Insight</span>
+                        </div>
+                        <h2 class="text-4xl font-bold text-white leading-tight mb-4 tracking-tight">
+                            抖音电商<br/>热点数据<br/>
+                            <span class="text-primary">可视化分析系统</span>
+                        </h2>
+                        <p class="text-gray-300 text-base max-w-sm leading-relaxed">
+                            基于大数据分析，洞察电商趋势，助力品牌精准营销与决策。
+                        </p>
+                    </div>
+                    
+                    <div class="relative z-10 mt-12">
+                        <div class="flex gap-4">
+                            <div class="flex flex-col">
+                                <span class="text-2xl font-bold text-white">99.9%</span>
+                                <span class="text-xs text-primary uppercase tracking-wider font-semibold">数据准确率</span>
+                            </div>
+                            <div class="w-px h-10 bg-gray-600"></div>
+                            <div class="flex flex-col">
+                                <span class="text-2xl font-bold text-white">24h</span>
+                                <span class="text-xs text-primary uppercase tracking-wider font-semibold">实时监控</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧表单区 -->
+                <div class="flex flex-col justify-center p-8 sm:p-12 lg:p-16 w-full bg-background-light dark:bg-[#152326]">
+                    <div class="lg:hidden mb-8">
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
+                            抖音电商热点数据<br/>可视化分析系统
+                        </h2>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">欢迎登录</h3>
+                        <p class="text-slate-500 dark:text-text-secondary text-sm">请输入您的账号和密码以访问控制台</p>
+                    </div>
+                    
+                    <form @submit.prevent="handleLogin" class="flex flex-col gap-5">
+                        <!-- 错误提示 -->
+                        <transition name="fade">
+                            <div v-if="error" class="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                                {{ error }}
+                            </div>
+                        </transition>
+                        
+                        <!-- 用户名 -->
+                        <label class="flex flex-col gap-2">
+                            <span class="text-slate-700 dark:text-white text-sm font-medium">账号</span>
+                            <div class="relative flex w-full items-center">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400 dark:text-[#92c0c9]">
+                                    <span class="material-symbols-outlined text-[20px]">person</span>
+                                </div>
+                                <input v-model="form.username"
+                                       class="w-full h-12 pl-11 pr-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm font-normal"
+                                       placeholder="请输入用户名"
+                                       type="text"
+                                       autocomplete="username"/>
+                            </div>
+                        </label>
+                        
+                        <!-- 密码 -->
+                        <label class="flex flex-col gap-2">
+                            <span class="text-slate-700 dark:text-white text-sm font-medium">密码</span>
+                            <div class="relative flex w-full items-center">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400 dark:text-[#92c0c9]">
+                                    <span class="material-symbols-outlined text-[20px]">lock</span>
+                                </div>
+                                <input v-model="form.password"
+                                       :type="showPassword ? 'text' : 'password'"
+                                       class="w-full h-12 pl-11 pr-11 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 text-sm font-normal"
+                                       placeholder="请输入密码"
+                                       autocomplete="current-password"/>
+                                <button @click="showPassword = !showPassword"
+                                        class="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 dark:text-[#92c0c9] hover:text-primary transition-colors cursor-pointer"
+                                        type="button">
+                                    <span class="material-symbols-outlined text-[20px]">
+                                        {{ showPassword ? 'visibility_off' : 'visibility' }}
+                                    </span>
+                                </button>
+                            </div>
+                        </label>
+                        
+                        <!-- 记住我 & 忘记密码 -->
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input v-model="form.remember"
+                                       class="h-4 w-4 rounded border-slate-300 dark:border-input-border bg-transparent text-primary focus:ring-primary/20 dark:focus:ring-offset-background-dark transition-all checked:bg-primary checked:border-primary"
+                                       type="checkbox"/>
+                                <span class="text-sm text-slate-600 dark:text-text-secondary group-hover:text-slate-900 dark:group-hover:text-white transition-colors select-none">记住我</span>
+                            </label>
+                            <a @click.prevent="showResetDialog = true" class="text-sm font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer">忘记密码?</a>
+                        </div>
+                        
+                        <!-- 登录按钮 -->
+                        <button :disabled="loading"
+                                class="mt-2 flex w-full items-center justify-center rounded-lg bg-primary h-12 px-6 text-background-dark text-base font-bold tracking-wide hover:bg-[#0ebacb] active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(19,200,236,0.3)] hover:shadow-[0_0_25px_rgba(19,200,236,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="submit">
+                            <span v-if="loading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                            {{ loading ? '登录中...' : '立即登录' }}
+                        </button>
+                        
+                        <!-- 注册链接 -->
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-slate-500 dark:text-text-secondary">
+                                还没有账号? 
+                                <a class="font-medium text-primary hover:text-primary/80 transition-colors ml-1" href="register.html">立即注册</a>
+                            </p>
+                        </div>
+                    </form>
+                    
+                    <!-- 忘记密码弹窗 -->
+                    <div v-if="showResetDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="showResetDialog = false">
+                        <div class="w-full max-w-md mx-4 rounded-2xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#325e67]/30 shadow-2xl p-8">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white">重置密码</h3>
+                                <button @click="showResetDialog = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <form @submit.prevent="handleResetPassword" class="flex flex-col gap-4">
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-slate-700 dark:text-white text-sm font-medium">账号</span>
+                                    <input v-model="resetForm.username"
+                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                           placeholder="请输入要重置密码的用户名" type="text"/>
+                                </label>
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-slate-700 dark:text-white text-sm font-medium">新密码</span>
+                                    <input v-model="resetForm.newPassword"
+                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                           placeholder="请输入新密码（至少6位）" type="password"/>
+                                </label>
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-slate-700 dark:text-white text-sm font-medium">确认新密码</span>
+                                    <input v-model="resetForm.confirmPassword"
+                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                           placeholder="请再次输入新密码" type="password"/>
+                                </label>
+                                <button :disabled="resetLoading"
+                                        class="mt-2 flex w-full items-center justify-center rounded-lg bg-primary h-12 px-6 text-background-dark text-base font-bold hover:bg-[#0ebacb] active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(19,200,236,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        type="submit">
+                                    <span v-if="resetLoading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                                    {{ resetLoading ? '重置中...' : '重置密码' }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- 底部版权 -->
+                    <div class="mt-auto pt-8 text-center lg:text-left">
+                        <p class="text-xs text-slate-400 dark:text-slate-600">© 2024 Douyin E-commerce Analysis System. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted } = Vue
+
+const API_BASE = 'http://localhost:5001/api'
+
+createApp({
+    setup() {
+        const form = reactive({
+            username: '',
+            password: '',
+            remember: false
+        })
+        
+        const loading = ref(false)
+        const error = ref('')
+        const showPassword = ref(false)
+        const showResetDialog = ref(false)
+        const resetLoading = ref(false)
+        const resetForm = reactive({
+            username: '',
+            newPassword: '',
+            confirmPassword: ''
+        })
+        
+        // 检查是否已登录
+        onMounted(() => {
+            const token = localStorage.getItem('token')
+            if (token) {
+                // 已登录，跳转到首页
+                window.location.href = 'index.html'
+            }
+            
+            // 恢复记住的用户名
+            const savedUsername = localStorage.getItem('remembered_username')
+            if (savedUsername) {
+                form.username = savedUsername
+                form.remember = true
+            }
+        })
+        
+        const handleLogin = async () => {
+            error.value = ''
+            
+            if (!form.username.trim()) {
+                Toast.warning('请输入用户名')
+                return
+            }
+            if (!form.password) {
+                Toast.warning('请输入密码')
+                return
+            }
+            
+            loading.value = true
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: form.username.trim(),
+                        password: form.password
+                    })
+                })
+                
+                const result = await response.json()
+                
+                if (result.success) {
+                    // 保存 token 和用户信息
+                    localStorage.setItem('token', result.data.token)
+                    localStorage.setItem('user', JSON.stringify(result.data.user))
+                    
+                    // 记住用户名
+                    if (form.remember) {
+                        localStorage.setItem('remembered_username', form.username)
+                    } else {
+                        localStorage.removeItem('remembered_username')
+                    }
+                    
+                    Toast.success('登录成功，正在跳转...')
+                    
+                    // 跳转到系统后台
+                    setTimeout(() => {
+                        window.location.href = 'index.html'
+                    }, 1000)
+                } else {
+                    Toast.error(result.message || '登录失败')
+                }
+            } catch (e) {
+                console.error('Login error:', e)
+                Toast.error('网络错误，请检查后端服务是否启动')
+            } finally {
+                loading.value = false
+            }
+        }
+        
+        const handleResetPassword = async () => {
+            if (!resetForm.username.trim()) {
+                Toast.warning('请输入用户名')
+                return
+            }
+            if (!resetForm.newPassword || resetForm.newPassword.length < 6) {
+                Toast.warning('新密码长度至少6位')
+                return
+            }
+            if (resetForm.newPassword !== resetForm.confirmPassword) {
+                Toast.warning('两次输入的密码不一致')
+                return
+            }
+
+            resetLoading.value = true
+            try {
+                const response = await fetch(`${API_BASE}/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: resetForm.username.trim(),
+                        new_password: resetForm.newPassword
+                    })
+                })
+                const result = await response.json()
+                if (result.success) {
+                    Toast.success(result.message)
+                    showResetDialog.value = false
+                    resetForm.username = ''
+                    resetForm.newPassword = ''
+                    resetForm.confirmPassword = ''
+                } else {
+                    Toast.error(result.message || '重置失败')
+                }
+            } catch (e) {
+                Toast.error('网络错误，请检查后端服务')
+            } finally {
+                resetLoading.value = false
+            }
+        }
+
+        return {
+            form,
+            loading,
+            error,
+            showPassword,
+            showResetDialog,
+            resetLoading,
+            resetForm,
+            handleLogin,
+            handleResetPassword
+        }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

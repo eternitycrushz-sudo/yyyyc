@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>抖音电商热点分析系统 - 核心卖点</title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/fonts.css" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tech-grid {
+            background-image: radial-gradient(#13c8ec 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d191b] dark:text-white transition-colors duration-300">
+
+<div id="app">
+    <!-- Top Navigation Bar -->
+    <header class="flex items-center justify-between border-b border-[#e7f1f3] dark:border-[#1f3a3e] px-10 py-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <div class="size-8 text-primary">
+                <span class="material-symbols-outlined text-4xl">insights</span>
+            </div>
+            <h2 class="text-lg font-bold">抖音电商热点分析系统</h2>
+        </div>
+        <div class="flex flex-1 justify-end gap-8">
+            <nav class="flex items-center gap-9">
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="#hero">首页</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="#features">核心功能</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="#cta">价格方案</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors" href="#footer">关于我们</a>
+            </nav>
+            <div class="flex gap-2 items-center">
+                <!-- 主题切换按钮 -->
+                <button @click="toggleTheme" class="p-2 rounded-lg hover:bg-[#e7f1f3] dark:hover:bg-[#1f3a3e] transition-colors">
+                    <span v-if="isDark" class="material-symbols-outlined text-yellow-400">light_mode</span>
+                    <span v-else class="material-symbols-outlined">dark_mode</span>
+                </button>
+                <a href="register.html" class="flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-[#0d191b] text-sm font-bold hover:opacity-90 transition-opacity">
+                    免费试用
+                </a>
+                <a href="login.html" class="flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 bg-[#e7f1f3] dark:bg-[#1f3a3e] text-sm font-bold hover:opacity-90 transition-opacity">
+                    登录
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1">
+        <!-- Hero Section -->
+        <section id="hero" class="relative pt-20 pb-10 px-4 text-center overflow-hidden">
+            <div class="absolute inset-0 tech-grid opacity-10"></div>
+            <div class="relative z-10">
+                <span class="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-widest uppercase bg-primary/20 text-primary rounded-full">
+                    CORE ADVANTAGES
+                </span>
+                <h1 class="text-[32px] md:text-[48px] font-black leading-tight tracking-tight mb-4">
+                    掌握未来趋势，引领电商增长
+                </h1>
+                <p class="text-[#4c8d9a] dark:text-[#a0c4cc] text-lg max-w-2xl mx-auto">
+                    结合顶级 AI 算法与实时数据处理，为您打造全方位的电商增长引擎
+                </p>
+            </div>
+        </section>
+
+        <!-- Feature 1: AI Prediction -->
+        <section id="features" class="max-w-[1200px] mx-auto px-4 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                <!-- 左侧：图表展示 -->
+                <div class="relative group">
+                    <div class="absolute -inset-4 bg-primary/10 rounded-xl blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                    <div class="relative bg-gradient-to-br from-gray-100 to-gray-200 dark:from-[#0a1f1f] dark:to-[#0d2828] p-8 rounded-2xl border border-primary/20 shadow-2xl overflow-hidden">
+                        <!-- 背景网格 -->
+                        <div class="absolute inset-0 opacity-5">
+                            <div class="absolute inset-0" style="background-image: linear-gradient(#13c8ec 1px, transparent 1px), linear-gradient(90deg, #13c8ec 1px, transparent 1px); background-size: 20px 20px;"></div>
+                        </div>
+                        
+                        <!-- 标题 -->
+                        <div class="relative z-10 mb-8">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-400">爆款热度趋势预测</span>
+                                <div class="flex gap-1">
+                                    <div class="w-2 h-2 rounded-full bg-red-400"></div>
+                                    <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+                                    <div class="w-2 h-2 rounded-full bg-green-400"></div>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-500">AI ANALYTICAL MODEL V4.2</div>
+                        </div>
+                        
+                        <!-- SVG 曲线图 -->
+                        <div class="relative h-48 mb-6">
+                            <svg class="w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
+                                <!-- 网格线 -->
+                                <line x1="0" y1="50" x2="400" y2="50" stroke="#13c8ec" stroke-width="0.5" opacity="0.1"/>
+                                <line x1="0" y1="100" x2="400" y2="100" stroke="#13c8ec" stroke-width="0.5" opacity="0.1"/>
+                                <line x1="0" y1="150" x2="400" y2="150" stroke="#13c8ec" stroke-width="0.5" opacity="0.1"/>
+                                
+                                <!-- 渐变定义 -->
+                                <defs>
+                                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#13c8ec;stop-opacity:0.3" />
+                                        <stop offset="100%" style="stop-color:#13c8ec;stop-opacity:1" />
+                                    </linearGradient>
+                                    <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#13c8ec;stop-opacity:0.3" />
+                                        <stop offset="100%" style="stop-color:#13c8ec;stop-opacity:0" />
+                                    </linearGradient>
+                                </defs>
+                                
+                                <!-- 曲线路径 -->
+                                <path d="M 0 180 Q 50 160, 100 140 T 200 100 T 300 60 T 400 40" 
+                                      fill="none" 
+                                      stroke="url(#lineGradient)" 
+                                      stroke-width="3"
+                                      class="animate-pulse"/>
+                                
+                                <!-- 填充区域 -->
+                                <path d="M 0 180 Q 50 160, 100 140 T 200 100 T 300 60 T 400 40 L 400 200 L 0 200 Z" 
+                                      fill="url(#areaGradient)"/>
+                                
+                                <!-- 当前点 -->
+                                <circle cx="300" cy="60" r="6" fill="#13c8ec" class="animate-pulse">
+                                    <animate attributeName="r" values="6;8;6" dur="2s" repeatCount="indefinite"/>
+                                </circle>
+                                <circle cx="300" cy="60" r="12" fill="#13c8ec" opacity="0.3"/>
+                            </svg>
+                            
+                            <!-- 增长标签 -->
+                            <div class="absolute top-8 left-1/2 -translate-x-1/2 bg-primary/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary/30">
+                                <div class="text-xs text-gray-400 mb-1">7日预测增幅</div>
+                                <div class="text-2xl font-bold text-primary">+248.5%</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 时间轴 -->
+                        <div class="relative z-10 flex justify-between text-[10px] text-gray-500 border-t border-gray-700 pt-3">
+                            <span>10-25</span>
+                            <span>10-27</span>
+                            <span class="text-primary font-bold">TODAY</span>
+                            <span>11-01</span>
+                            <span>11-03</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧：文字说明 -->
+                <div class="flex flex-col gap-6">
+                    <div class="size-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+                        <span class="material-symbols-outlined text-3xl">show_chart</span>
+                    </div>
+                    <h2 class="text-3xl font-bold">AI 7日热度智能预测</h2>
+                    <p class="text-[#4c8d9a] dark:text-[#a0c4cc] text-lg leading-relaxed">
+                        采用行业领先的 Time-Series Transformers 模型，深度挖掘社交媒体信号与交易流水。在爆款形成前 48-72 小时提前锁定高潜品。
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-[#1a2e32] p-4 rounded-xl border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <div class="text-xs text-[#4c8d9a] mb-1">预测准确率</div>
+                            <div class="text-2xl font-bold text-primary">94.2<span class="text-sm">%</span></div>
+                        </div>
+                        <div class="bg-white dark:bg-[#1a2e32] p-4 rounded-xl border border-[#e7f1f3] dark:border-[#2a454a]">
+                            <div class="text-xs text-[#4c8d9a] mb-1">模型训练数据</div>
+                            <div class="text-2xl font-bold text-primary">100<span class="text-sm">T</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature 2: Crawler Matrix -->
+        <section class="bg-primary/5 py-24">
+            <div class="max-w-[1200px] mx-auto px-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                    <!-- 左侧：文字说明 -->
+                    <div class="order-2 md:order-1 flex flex-col gap-6">
+                        <div class="size-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+                            <span class="material-symbols-outlined text-3xl">settings_suggest</span>
+                        </div>
+                        <h2 class="text-3xl font-bold">自动化爬虫矩阵</h2>
+                        <p class="text-[#4c8d9a] dark:text-[#a0c4cc] text-lg leading-relaxed">
+                            全天候实时监控全平台数据，毫秒级更新频率。通过分布式节点矩阵，我们能够捕捉到每一个细微的市场波动，确保您掌握每一秒的电商脉搏。
+                        </p>
+                        <div class="flex gap-4">
+                            <div class="px-6 py-3 bg-white dark:bg-[#1a2e32] rounded-xl shadow-sm border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <p class="text-xs text-[#4c8d9a] mb-1">实时并发</p>
+                                <p class="text-2xl font-bold text-primary">50,000<span class="text-sm">+</span></p>
+                            </div>
+                            <div class="px-6 py-3 bg-white dark:bg-[#1a2e32] rounded-xl shadow-sm border border-[#e7f1f3] dark:border-[#2a454a]">
+                                <p class="text-xs text-[#4c8d9a] mb-1">延迟</p>
+                                <p class="text-2xl font-bold text-primary">&lt; 100<span class="text-sm">ms</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧：节点矩阵动画 -->
+                    <div class="order-1 md:order-2 relative">
+                        <div class="relative w-full aspect-square max-w-md mx-auto">
+                            <!-- 中心节点 -->
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                                <div class="relative">
+                                    <div class="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
+                                    <div class="relative size-20 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center shadow-lg shadow-primary/50">
+                                        <span class="material-symbols-outlined text-white text-4xl">database</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 连接线 SVG -->
+                            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 400">
+                                <defs>
+                                    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#13c8ec;stop-opacity:0.1" />
+                                        <stop offset="100%" style="stop-color:#13c8ec;stop-opacity:0.5" />
+                                    </linearGradient>
+                                </defs>
+                                <line x1="200" y1="200" x2="80" y2="80" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="5,5">
+                                    <animate attributeName="stroke-dashoffset" from="0" to="10" dur="1s" repeatCount="indefinite"/>
+                                </line>
+                                <line x1="200" y1="200" x2="320" y2="80" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="5,5">
+                                    <animate attributeName="stroke-dashoffset" from="0" to="10" dur="1s" repeatCount="indefinite"/>
+                                </line>
+                                <line x1="200" y1="200" x2="80" y2="320" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="5,5">
+                                    <animate attributeName="stroke-dashoffset" from="0" to="10" dur="1s" repeatCount="indefinite"/>
+                                </line>
+                                <line x1="200" y1="200" x2="320" y2="320" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="5,5">
+                                    <animate attributeName="stroke-dashoffset" from="0" to="10" dur="1s" repeatCount="indefinite"/>
+                                </line>
+                                <line x1="200" y1="200" x2="350" y2="200" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="5,5">
+                                    <animate attributeName="stroke-dashoffset" from="0" to="10" dur="1s" repeatCount="indefinite"/>
+                                </line>
+                                <line x1="200" y1="200" x2="50" y2="200" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="5,5">
+                                    <animate attributeName="stroke-dashoffset" from="0" to="10" dur="1s" repeatCount="indefinite"/>
+                                </line>
+                            </svg>
+                            
+                            <!-- 浮动节点 -->
+                            <div class="absolute top-[10%] left-[10%] size-14 bg-white dark:bg-[#1a2e32] rounded-2xl border-2 border-primary/30 flex items-center justify-center shadow-lg animate-bounce" style="animation-duration: 3s;">
+                                <span class="material-symbols-outlined text-primary text-2xl">sensors</span>
+                            </div>
+                            <div class="absolute top-[10%] right-[10%] size-14 bg-white dark:bg-[#1a2e32] rounded-2xl border-2 border-primary/30 flex items-center justify-center shadow-lg animate-bounce" style="animation-duration: 2.5s; animation-delay: 0.5s;">
+                                <span class="material-symbols-outlined text-primary text-2xl">radar</span>
+                            </div>
+                            <div class="absolute bottom-[10%] left-[10%] size-14 bg-white dark:bg-[#1a2e32] rounded-2xl border-2 border-primary/30 flex items-center justify-center shadow-lg animate-bounce" style="animation-duration: 2.8s; animation-delay: 0.3s;">
+                                <span class="material-symbols-outlined text-primary text-2xl">cloud_sync</span>
+                            </div>
+                            <div class="absolute bottom-[10%] right-[10%] size-14 bg-white dark:bg-[#1a2e32] rounded-2xl border-2 border-primary/30 flex items-center justify-center shadow-lg animate-bounce" style="animation-duration: 3.2s; animation-delay: 0.7s;">
+                                <span class="material-symbols-outlined text-primary text-2xl">language</span>
+                            </div>
+                            <div class="absolute top-1/2 -translate-y-1/2 right-[5%] size-12 bg-white dark:bg-[#1a2e32] rounded-xl border-2 border-primary/30 flex items-center justify-center shadow-lg animate-bounce" style="animation-duration: 2.6s; animation-delay: 0.2s;">
+                                <span class="material-symbols-outlined text-primary text-xl">public</span>
+                            </div>
+                            <div class="absolute top-1/2 -translate-y-1/2 left-[5%] size-12 bg-white dark:bg-[#1a2e32] rounded-xl border-2 border-primary/30 flex items-center justify-center shadow-lg animate-bounce" style="animation-duration: 2.9s; animation-delay: 0.4s;">
+                                <span class="material-symbols-outlined text-primary text-xl">api</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature 3: AI Assistant -->
+        <section class="max-w-[1200px] mx-auto px-4 py-24">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                <div class="relative">
+                    <div class="bg-[#e7f1f3] dark:bg-[#1a2e32] rounded-2xl overflow-hidden shadow-2xl border border-[#e7f1f3] dark:border-[#2a454a]">
+                        <div class="bg-white dark:bg-[#0d191b] px-4 py-3 border-b border-[#e7f1f3] dark:border-[#1f3a3e] flex items-center gap-2">
+                            <div class="size-2 rounded-full bg-red-400"></div>
+                            <div class="size-2 rounded-full bg-amber-400"></div>
+                            <div class="size-2 rounded-full bg-green-400"></div>
+                            <span class="ml-4 text-xs font-medium text-[#4c8d9a]">AI 智能选品助手</span>
+                        </div>
+                        <div class="p-6 flex flex-col gap-4">
+                            <div class="self-start bg-white dark:bg-[#0d191b] p-3 rounded-lg rounded-tl-none shadow-sm max-w-[80%] text-sm">
+                                帮我推荐三个下周在"美妆"类目可能有爆发潜力的商品。
+                            </div>
+                            <div class="self-end bg-primary text-[#0d191b] p-3 rounded-lg rounded-tr-none shadow-sm max-w-[80%] text-sm font-medium">
+                                为您分析完毕。根据7日趋势预测，推荐以下高转化率单品：
+                            </div>
+                            <div class="bg-white dark:bg-[#0d191b] p-4 rounded-xl border border-primary/30 flex gap-4">
+                                <div class="size-16 bg-[#f0faff] dark:bg-[#1a2e32] rounded-lg flex items-center justify-center text-primary">
+                                    <span class="material-symbols-outlined text-3xl">shopping_bag</span>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-bold text-sm">植物基修复精华液</p>
+                                    <p class="text-xs text-[#4c8d9a]">预测增长: +145%</p>
+                                    <div class="mt-2 w-full bg-[#f0faff] dark:bg-[#1a2e32] h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-primary h-full w-[85%]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-6">
+                    <div class="size-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+                        <span class="material-symbols-outlined text-3xl">smart_toy</span>
+                    </div>
+                    <h2 class="text-3xl font-bold">智能 AI 选品助手</h2>
+                    <p class="text-[#4c8d9a] dark:text-[#a0c4cc] text-lg">
+                        对话式智能交互，根据您的需求自动推荐高转化率商品。不再需要从海量报表中寻找机会，只需简单提问，AI 助手一键为您完成选品决策。
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-[#e7f1f3] dark:bg-[#1a2e32] text-xs font-semibold rounded-full">自动化调研</span>
+                        <span class="px-3 py-1 bg-[#e7f1f3] dark:bg-[#1a2e32] text-xs font-semibold rounded-full">高转化推荐</span>
+                        <span class="px-3 py-1 bg-[#e7f1f3] dark:bg-[#1a2e32] text-xs font-semibold rounded-full">竞品对比</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section id="cta" class="max-w-[1200px] mx-auto px-4 py-20">
+            <div class="bg-gradient-to-br from-[#e7f1f3] to-[#d6eef1] dark:bg-none dark:bg-[#1a2e32] rounded-3xl p-12 text-center relative overflow-hidden shadow-2xl">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full -ml-32 -mb-32 blur-3xl"></div>
+                <h2 class="text-slate-800 dark:text-white text-3xl md:text-4xl font-black mb-6 relative z-10">
+                    准备好提升您的电商效率了吗？
+                </h2>
+                <p class="text-slate-600 dark:text-[#a0c4cc] text-lg mb-10 max-w-xl mx-auto relative z-10">
+                    现在加入，前30天享受高级版 AI 预测功能，开启您的数字化增长之旅。
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 relative z-10">
+                    <a href="register.html" class="px-8 py-4 bg-primary text-[#0d191b] font-bold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2">
+                        <span>开启免费试用</span>
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </a>
+                    <a href="login.html" class="px-8 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all border border-white/10">
+                        预约演示
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="footer" class="bg-background-light dark:bg-background-dark border-t border-[#e7f1f3] dark:border-[#1f3a3e] py-12 px-10">
+        <div class="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="material-symbols-outlined text-primary text-2xl">insights</span>
+                    <h2 class="font-bold">抖音电商分析系统</h2>
+                </div>
+                <p class="text-sm text-[#4c8d9a]">基于数据智能，重新定义电商运营</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4">产品</h4>
+                <ul class="text-sm text-[#4c8d9a] space-y-2">
+                    <li><a class="hover:text-primary" href="#features">功能特性</a></li>
+                    <li><a class="hover:text-primary" href="#cta">价格方案</a></li>
+                    <li><a class="hover:text-primary" href="#">数据安全</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4">资源</h4>
+                <ul class="text-sm text-[#4c8d9a] space-y-2">
+                    <li><a class="hover:text-primary" href="#">帮助中心</a></li>
+                    <li><a class="hover:text-primary" href="#">API 文档</a></li>
+                    <li><a class="hover:text-primary" href="#">行业报告</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4">联系我们</h4>
+                <div class="flex gap-4">
+                    <a class="size-8 rounded-full bg-[#e7f1f3] dark:bg-[#1f3a3e] flex items-center justify-center text-[#4c8d9a] hover:text-primary" href="#">
+                        <span class="material-symbols-outlined text-sm">alternate_email</span>
+                    </a>
+                    <a class="size-8 rounded-full bg-[#e7f1f3] dark:bg-[#1f3a3e] flex items-center justify-center text-[#4c8d9a] hover:text-primary" href="#">
+                        <span class="material-symbols-outlined text-sm">chat_bubble</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="mt-12 pt-8 border-t border-[#e7f1f3] dark:border-[#1f3a3e] text-center text-[10px] text-[#4c8d9a]">
+            © 2024 抖音电商热点分析系统 版权所有
+        </div>
+    </footer>
+</div>
+
+<script>
+const { createApp, ref, onMounted } = Vue
+
+createApp({
+    setup() {
+        const isDark = ref(false)
+        
+        onMounted(() => {
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                isDark.value = true
+                document.documentElement.classList.add('dark')
+            }
+        })
+        
+        const toggleTheme = () => {
+            isDark.value = !isDark.value
+            if (isDark.value) {
+                document.documentElement.classList.add('dark')
+                localStorage.setItem('theme', 'dark')
+            } else {
+                document.documentElement.classList.remove('dark')
+                localStorage.setItem('theme', 'light')
+            }
+        }
+        
+        return { isDark, toggleTheme }
+    }
+}).mount('#app')
+</script>
+
+</body>
+</html>

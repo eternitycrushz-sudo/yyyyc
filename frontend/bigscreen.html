@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>数据大屏 - 抖音电商分析系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #060e12; color: #e0f0f0; font-family: "Inter", "Noto Sans SC", -apple-system, sans-serif; overflow: hidden; height: 100vh; }
+
+        /* ---- 背景装饰 ---- */
+        .bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(19,200,236,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(19,200,236,0.03) 1px, transparent 1px);
+            background-size: 50px 50px; }
+        canvas#particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        /* ---- 顶部装饰线 ---- */
+        .top-line { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 100;
+            background: linear-gradient(90deg, transparent, #13c8ec, #67e8f9, #13c8ec, transparent); }
+
+        /* ---- Header ---- */
+        .header { height: 64px; position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+            background: linear-gradient(180deg, rgba(19,200,236,0.06) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(19,200,236,0.15); }
+        .header::after { content: ''; position: absolute; bottom: -1px; left: 15%; right: 15%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(19,200,236,0.5), transparent); }
+        .header h1 { font-size: 22px; font-weight: 800; letter-spacing: 3px;
+            background: linear-gradient(90deg, #13c8ec, #67e8f9, #13c8ec); background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite; }
+        @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+        .header .time { font-size: 13px; color: #67e8f9; font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 8px rgba(19,200,236,0.4); display: flex; align-items: center; gap: 8px; }
+        .header .time::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+            box-shadow: 0 0 6px #22c55e; animation: blink 2s infinite; }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .back-btn { background: rgba(19,200,236,0.08); border: 1px solid rgba(19,200,236,0.25); color: #67e8f9;
+            padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; text-decoration: none;
+            transition: all 0.3s; }
+        .back-btn:hover { background: rgba(19,200,236,0.15); border-color: rgba(19,200,236,0.5);
+            box-shadow: 0 0 12px rgba(19,200,236,0.15); }
+
+        /* ---- Main Layout ---- */
+        .main { display: flex; flex-direction: column; height: calc(100vh - 64px); padding: 12px 20px 16px; gap: 12px; position: relative; z-index: 10; }
+
+        /* Stats Row */
+        .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; flex-shrink: 0; }
+        .stat-card { background: linear-gradient(135deg, rgba(19,200,236,0.06), rgba(19,200,236,0.02));
+            border: 1px solid rgba(19,200,236,0.12); border-radius: 10px; padding: 14px 16px; text-align: center;
+            position: relative; overflow: hidden; transition: all 0.3s; }
+        .stat-card:hover { border-color: rgba(19,200,236,0.35); box-shadow: 0 4px 20px rgba(19,200,236,0.1); }
+        .stat-card .val { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .stat-card .val.cyan { color: #13c8ec; text-shadow: 0 0 15px rgba(19,200,236,0.3); }
+        .stat-card .val.green { color: #22c55e; text-shadow: 0 0 15px rgba(34,197,94,0.3); }
+        .stat-card .val.orange { color: #f97316; text-shadow: 0 0 15px rgba(249,115,22,0.3); }
+        .stat-card .val.purple { color: #a78bfa; text-shadow: 0 0 15px rgba(167,139,250,0.3); }
+        .stat-card .label { font-size: 11px; color: #6b9da8; margin-top: 4px; letter-spacing: 1px; }
+        .stat-card .trend { font-size: 10px; margin-top: 2px; }
+        .stat-card .trend.up { color: #22c55e; }
+        .stat-card .trend.down { color: #ef4444; }
+
+        /* Charts Grid */
+        .charts-grid { flex: 1; display: grid; grid-template-columns: 1fr 1.3fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 0; }
+
+        /* Panel */
+        .panel { background: linear-gradient(160deg, rgba(18,34,38,0.95), rgba(12,24,26,0.98));
+            border: 1px solid rgba(19,200,236,0.1); border-radius: 12px; padding: 14px 16px;
+            display: flex; flex-direction: column; position: relative; overflow: hidden; min-height: 0; }
+        .panel:hover { border-color: rgba(19,200,236,0.25); }
+        .panel::before { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(19,200,236,0.3), transparent); }
+        .panel-title { font-size: 13px; color: #67e8f9; font-weight: 700; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .panel-title::before { content: ''; width: 3px; height: 14px; border-radius: 2px;
+            background: linear-gradient(180deg, #13c8ec, #0891b2); box-shadow: 0 0 6px rgba(19,200,236,0.4); }
+        .panel-title .sub { font-size: 10px; color: #4b8a95; font-weight: 400; margin-left: auto; }
+        .chart { flex: 1; min-height: 0; }
+
+        /* Scroll Table */
+        .scroll-table { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; min-height: 0; }
+        .scroll-table table { width: 100%; font-size: 11px; border-collapse: collapse; }
+        .scroll-table th { color: #5a9ca8; padding: 8px 6px; text-align: left; font-size: 10px; letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(19,200,236,0.15); position: sticky; top: 0; background: rgba(12,24,26,0.98); font-weight: 600; }
+        .scroll-table td { padding: 7px 6px; border-bottom: 1px solid rgba(50,94,103,0.15); }
+        .scroll-table tr { transition: background 0.15s; }
+        .scroll-table tr:hover { background: rgba(19,200,236,0.06); }
+        .scroll-wrap { flex: 1; overflow: hidden; min-height: 0; }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .badge-hot { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-warm { background: rgba(249,115,22,0.15); color: #fb923c; }
+        .badge-normal { background: rgba(34,197,94,0.15); color: #4ade80; }
+        @keyframes scroll { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+        .scroll-body { animation: scroll 25s linear infinite; }
+        .scroll-body:hover { animation-play-state: paused; }
+
+        /* rank badge */
+        .rank { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+            border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 4px; }
+        .rank-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+        .rank-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: #fff; }
+        .rank-n { background: rgba(50,94,103,0.3); color: #6b9da8; }
+    </style>
+</head>
+<body>
+<div class="top-line"></div>
+<div class="bg-grid"></div>
+<canvas id="particles"></canvas>
+
+<div class="header">
+    <div style="display:flex; align-items:center; gap:16px;">
+        <a href="dashboard.html" class="back-btn">← 返回</a>
+        <h1>抖音电商热点数据可视化大屏</h1>
+    </div>
+    <div class="time" id="headerTime">LIVE</div>
+</div>
+
+<div class="main">
+    <!-- 统计卡片行 - 6列 -->
+    <div class="stats-row">
+        <div class="stat-card"><div class="val cyan" id="statTotal">-</div><div class="label">商品总数</div><div class="trend up" id="trendTotal"></div></div>
+        <div class="stat-card"><div class="val green" id="statShops">-</div><div class="label">店铺总数</div></div>
+        <div class="stat-card"><div class="val cyan" id="statPrice">-</div><div class="label">平均价格</div></div>
+        <div class="stat-card"><div class="val orange" id="statCommission">-</div><div class="label">平均佣金</div></div>
+        <div class="stat-card"><div class="val purple" id="statMaxPrice">-</div><div class="label">最高价格</div></div>
+        <div class="stat-card"><div class="val green" id="statMaxCos">-</div><div class="label">最高佣金</div></div>
+    </div>
+
+    <!-- 图表网格 - 3列2行 -->
+    <div class="charts-grid">
+        <!-- 左上: 价格分布 -->
+        <div class="panel">
+            <div class="panel-title">价格分布 <span class="sub">按价格区间统计</span></div>
+            <div id="priceChart" class="chart"></div>
+        </div>
+        <!-- 中上: 采集趋势 -->
+        <div class="panel">
+            <div class="panel-title">商品采集趋势 <span class="sub">近30天</span></div>
+            <div id="trendChart" class="chart"></div>
+        </div>
+        <!-- 右上: TOP店铺 -->
+        <div class="panel">
+            <div class="panel-title">TOP 店铺 <span class="sub">按商品数排名</span></div>
+            <div id="shopChart" class="chart"></div>
+        </div>
+        <!-- 左下: 分类统计 -->
+        <div class="panel">
+            <div class="panel-title">分类统计 <span class="sub">按类目分布</span></div>
+            <div id="categoryChart" class="chart"></div>
+        </div>
+        <!-- 中下: 佣金排行 -->
+        <div class="panel">
+            <div class="panel-title">佣金排行 TOP 10 <span class="sub">高佣商品</span></div>
+            <div id="commissionChart" class="chart"></div>
+        </div>
+        <!-- 右下: 实时热销 -->
+        <div class="panel">
+            <div class="panel-title">实时热销商品 <span class="sub">按销量排序</span></div>
+            <div class="scroll-table">
+                <table><thead><tr><th>#</th><th>商品名称</th><th>价格</th><th>销量</th><th>热度</th></tr></thead></table>
+                <div class="scroll-wrap"><div class="scroll-body" id="scrollBody"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ======== 粒子背景 ========
+const canvas = document.getElementById('particles')
+const ctx = canvas.getContext('2d')
+let pts = []
+function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight }
+resizeCanvas()
+addEventListener('resize', resizeCanvas)
+for (let i = 0; i < 50; i++) {
+    pts.push({ x: Math.random()*innerWidth, y: Math.random()*innerHeight,
+        vx: (Math.random()-0.5)*0.25, vy: (Math.random()-0.5)*0.25,
+        r: Math.random()*1.2+0.3, o: Math.random()*0.25+0.05 })
+}
+function drawPts() {
+    ctx.clearRect(0,0,canvas.width,canvas.height)
+    pts.forEach(p => {
+        p.x += p.vx; p.y += p.vy
+        if (p.x<0) p.x=canvas.width; if (p.x>canvas.width) p.x=0
+        if (p.y<0) p.y=canvas.height; if (p.y>canvas.height) p.y=0
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2)
+        ctx.fillStyle=`rgba(19,200,236,${p.o})`; ctx.fill()
+    })
+    for (let i=0;i<pts.length;i++) for (let j=i+1;j<pts.length;j++) {
+        const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=Math.sqrt(dx*dx+dy*dy)
+        if (d<120) { ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y)
+            ctx.strokeStyle=`rgba(19,200,236,${0.04*(1-d/120)})`; ctx.lineWidth=0.5; ctx.stroke() }
+    }
+    requestAnimationFrame(drawPts)
+}
+drawPts()
+
+// ======== 图表 ========
+const API = 'http://localhost:5001/api'
+const TOKEN = localStorage.getItem('token')
+if (!TOKEN) location.href = 'login.html'
+const hdrs = { 'Authorization': `Bearer ${TOKEN}` }
+const charts = {}
+function gc(id) { if (!charts[id]) charts[id] = echarts.init(document.getElementById(id)); return charts[id] }
+async function api(u) { return (await fetch(`${API}${u}`, { headers: hdrs })).json() }
+
+function updateTime() {
+    const now = new Date()
+    document.getElementById('headerTime').textContent = now.toLocaleString('zh-CN') + '  LIVE'
+}
+setInterval(updateTime, 1000); updateTime()
+
+// 数字动画
+function animVal(el, end, pre='', dur=700) {
+    const t0 = performance.now(), isF = String(end).includes('.')
+    ;(function f(now) {
+        const p = Math.min((now-t0)/dur, 1), e = 1-Math.pow(1-p,3)
+        el.textContent = pre + (isF ? (end*e).toFixed(2) : Math.floor(end*e).toLocaleString())
+        if (p<1) requestAnimationFrame(f)
+    })(t0)
+}
+
+// 统一 tooltip 样式
+const tip = { backgroundColor:'rgba(8,16,18,0.92)', borderColor:'rgba(19,200,236,0.2)', borderWidth:1,
+    textStyle:{color:'#c0e8ee',fontSize:12}, padding:[8,12] }
+const splitL = { lineStyle:{color:'rgba(50,94,103,0.2)'} }
+
+async function init() {
+    // Overview
+    const ov = await api('/dashboard/overview')
+    if (ov.code===0) {
+        animVal(document.getElementById('statTotal'), ov.data.total_goods)
+        animVal(document.getElementById('statShops'), ov.data.total_shops)
+        animVal(document.getElementById('statPrice'), parseFloat(ov.data.avg_price), '¥')
+        animVal(document.getElementById('statCommission'), parseFloat(ov.data.avg_commission), '¥')
+        document.getElementById('trendTotal').textContent = `今日+${ov.data.today_count || 0}`
+    }
+
+    // 额外统计
+    const gl0 = await api('/goods/list?page=1&page_size=1&sort_by=price&order=desc')
+    if (gl0.code===0 && gl0.data.list[0]) {
+        animVal(document.getElementById('statMaxPrice'), parseFloat(gl0.data.list[0].price||0), '¥')
+    }
+    const gl1 = await api('/goods/list?page=1&page_size=1&sort_by=cos_fee&order=desc')
+    if (gl1.code===0 && gl1.data.list[0]) {
+        animVal(document.getElementById('statMaxCos'), parseFloat(gl1.data.list[0].cos_fee||0), '¥')
+    }
+
+    // 价格分布 - 南丁格尔玫瑰图
+    const pd = await api('/dashboard/price_distribution')
+    if (pd.code===0) {
+        const colors = ['#0e7490','#0891b2','#06b6d4','#22d3ee','#67e8f9','#a5f3fc']
+        gc('priceChart').setOption({
+            tooltip: { ...tip, trigger:'item', formatter:'{b}<br/>{c}件 ({d}%)' },
+            legend: { bottom: 4, textStyle:{color:'#6b9da8',fontSize:10}, itemWidth:10, itemHeight:10 },
+            series: [{ type:'pie', radius:['30%','68%'], center:['50%','46%'], roseType:'area',
+                data: pd.data, label:{show:false},
+                itemStyle:{ borderRadius:6, borderColor:'#060e12', borderWidth:3,
+                    color: p => colors[p.dataIndex%colors.length] },
+                emphasis:{ itemStyle:{shadowBlur:15, shadowColor:'rgba(19,200,236,0.4)'}, label:{show:true,color:'#67e8f9',fontSize:12,fontWeight:700} },
+                animationType:'scale', animationEasing:'elasticOut', animationDelay: i=>i*80
+            }]
+        })
+    }
+
+    // 采集趋势 - 面积图+柱状图
+    const tr = await api('/dashboard/daily_trend?days=30')
+    if (tr.code===0) {
+        gc('trendChart').setOption({
+            tooltip: { ...tip, trigger:'axis' },
+            grid: { left:45, right:15, top:25, bottom:25 },
+            xAxis: { type:'category', data:tr.data.dates, axisLabel:{color:'#5a9ca8',fontSize:9}, axisLine:{lineStyle:{color:'#1e3a3f'}}, boundaryGap:true },
+            yAxis: { type:'value', axisLabel:{color:'#5a9ca8',fontSize:9}, splitLine:splitL, axisLine:{show:false} },
+            series: [
+                { type:'bar', data:tr.data.counts, barWidth:'55%', z:1,
+                    itemStyle:{ borderRadius:[4,4,0,0],
+                        color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(19,200,236,0.8)'},{offset:1,color:'rgba(19,200,236,0.05)'}]) },
+                    emphasis:{ itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#67e8f9'},{offset:1,color:'rgba(19,200,236,0.1)'}])} }
+                },
+                { type:'line', data:tr.data.counts, smooth:true, symbol:'circle', symbolSize:5, z:2,
+                    lineStyle:{ color:'#67e8f9', width:2, shadowColor:'rgba(19,200,236,0.3)', shadowBlur:6 },
+                    itemStyle:{ color:'#67e8f9', borderColor:'#0c1a1e', borderWidth:2 },
+                    areaStyle:{ color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(103,232,249,0.12)'},{offset:1,color:'rgba(103,232,249,0)'}]) }
+                }
+            ]
+        })
+    }
+
+    // TOP 店铺 - 水平条形
+    const sh = await api('/dashboard/top_shops?limit=8')
+    if (sh.code===0) {
+        const items = sh.data.reverse()
+        gc('shopChart').setOption({
+            tooltip: { ...tip, trigger:'axis' },
+            grid: { left:90, right:40, top:8, bottom:8 },
+            xAxis: { type:'value', axisLabel:{color:'#5a9ca8',fontSize:9}, splitLine:splitL, axisLine:{show:false} },
+            yAxis: { type:'category', data:items.map(d=>d.shop_name?.substring(0,6)+'...'), axisLabel:{color:'#92c0c9',fontSize:10}, axisLine:{show:false}, axisTick:{show:false} },
+            series: [{ type:'bar', data:items.map(d=>d.goods_count), barWidth:12,
+                itemStyle:{ borderRadius:[0,6,6,0],
+                    color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(34,197,94,0.1)'},{offset:1,color:'#22c55e'}]) },
+                emphasis:{ itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(34,197,94,0.2)'},{offset:1,color:'#4ade80'}])} },
+                label:{ show:true, position:'right', color:'#4ade80', fontSize:10, fontWeight:600 },
+                animationDelay: i=>i*60
+            }]
+        })
+    }
+
+    // 分类统计 - 南丁格尔玫瑰图
+    const cat = await api('/dashboard/category_stats')
+    if (cat.code===0) {
+        const colors = ['#0891b2','#06b6d4','#22d3ee','#67e8f9','#a5f3fc','#cffafe','#0e7490','#14b8a6','#10b981','#34d399']
+        gc('categoryChart').setOption({
+            tooltip: { ...tip, trigger:'item', formatter:'{b}<br/>商品数: {c}' },
+            legend: { bottom: 8, textStyle:{color:'#6b9da8',fontSize:9}, itemWidth:8, itemHeight:8, type:'scroll' },
+            series: [{ type:'pie', radius:[20,'65%'], center:['50%','48%'], roseType:'radius',
+                data: cat.data.map((d,i)=>({...d, itemStyle:{color:colors[i%colors.length]}})),
+                label:{show:false},
+                itemStyle:{ borderRadius:4, borderColor:'#060e12', borderWidth:2 },
+                emphasis:{ itemStyle:{shadowBlur:15, shadowColor:'rgba(19,200,236,0.5)', borderWidth:3},
+                    label:{show:true,color:'#67e8f9',fontSize:11,fontWeight:700} },
+                animationType:'scale', animationEasing:'elasticOut', animationDelay: i=>i*50
+            }]
+        })
+    }
+
+    // 佣金排行
+    const cm = await api('/dashboard/commission_ranking?limit=10')
+    if (cm.code===0) {
+        const items = cm.data.reverse()
+        gc('commissionChart').setOption({
+            tooltip: { ...tip, trigger:'axis', formatter: p=>`${p[0].name}<br/>佣金: ¥${p[0].value}` },
+            grid: { left:110, right:50, top:8, bottom:8 },
+            xAxis: { type:'value', axisLabel:{color:'#5a9ca8',fontSize:9,formatter:'¥{value}'}, splitLine:splitL, axisLine:{show:false} },
+            yAxis: { type:'category', data:items.map(d=>d.title?.substring(0,8)+'...'), axisLabel:{color:'#92c0c9',fontSize:10}, axisLine:{show:false}, axisTick:{show:false} },
+            series: [{ type:'bar', data:items.map(d=>d.cos_fee), barWidth:12,
+                itemStyle:{ borderRadius:[0,6,6,0],
+                    color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(249,115,22,0.1)'},{offset:1,color:'#f97316'}]) },
+                emphasis:{ itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(249,115,22,0.2)'},{offset:1,color:'#fb923c'}])} },
+                label:{ show:true, position:'right', color:'#fb923c', fontSize:10, formatter:'¥{c}' },
+                animationDelay: i=>i*60
+            }]
+        })
+    }
+
+    // 热销滚动表
+    const gl = await api('/goods/list?page=1&page_size=20&sort_by=sales&order=desc')
+    if (gl.code===0) {
+        const list = gl.data.list
+        let html = '<table style="width:100%;font-size:11px;border-collapse:collapse;">'
+        const doubled = [...list, ...list]
+        doubled.forEach((g,i) => {
+            const idx = (i % list.length) + 1
+            const sales = parseInt(g.sales)||0
+            const heat = sales>100000?'hot':sales>10000?'warm':'normal'
+            const heatLabel = heat==='hot'?'爆热':heat==='warm'?'热销':'正常'
+            const rc = idx<=3 ? `rank-${idx}` : 'rank-n'
+            html += `<tr style="border-bottom:1px solid rgba(50,94,103,0.12);">
+                <td style="padding:7px 4px;width:24px"><span class="rank ${rc}">${idx}</span></td>
+                <td style="padding:7px 4px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.title?.substring(0,14)}</td>
+                <td style="padding:7px 4px;color:#13c8ec;font-weight:600;white-space:nowrap">¥${g.price||0}</td>
+                <td style="padding:7px 4px;font-variant-numeric:tabular-nums;white-space:nowrap">${sales.toLocaleString()}</td>
+                <td style="padding:7px 4px"><span class="badge badge-${heat}">${heatLabel}</span></td>
+            </tr>`
+        })
+        html += '</table>'
+        document.getElementById('scrollBody').innerHTML = html
+    }
+}
+
+addEventListener('resize', () => Object.values(charts).forEach(c=>c.resize()))
+init()
+setInterval(init, 300000)
+</script>
+</body>
+</html>

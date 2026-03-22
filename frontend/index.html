@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <script>if(localStorage.getItem('theme')!=='light')document.documentElement.classList.add('dark')</script>
+    <title>抖音电商热点数据可视化分析系统</title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/fonts.css?v=5" rel="stylesheet"/>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/utils.js?v=1"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13c8ec",
+                        "background-dark": "#101f22",
+                        "surface-dark": "#16282b",
+                        "card-dark": "#1a3035",
+                        "input-bg": "#192f33",
+                        "input-border": "#325e67",
+                        "text-secondary": "#92c0c9"
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
+        html.dark ::-webkit-scrollbar-track { background: #111f22; }
+        html.dark ::-webkit-scrollbar-thumb { background: #325e67; }
+        .sidebar-item:hover { background: rgba(19, 200, 236, 0.1); }
+        .sidebar-item.active { background: rgba(19, 200, 236, 0.2); border-left: 3px solid #13c8ec; }
+        
+        /* Vue 未挂载前隐藏应用 */
+        [v-cloak] { display: none !important; }
+        
+        /* Vue v-cloak 已处理未挂载前的闪烁，无需额外隐藏 */
+        
+        /* 亮色主题样式 */
+        .light-theme {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8f8;
+            --bg-card: #ffffff;
+            --border-color: #e0e0e0;
+            --text-primary: #0d191b;
+            --text-secondary: #4c8d9a;
+        }
+        
+        /* 暗色主题样式 */
+        .dark-theme {
+            --bg-primary: #101f22;
+            --bg-secondary: #16282b;
+            --bg-card: #1a3035;
+            --border-color: #325e67;
+            --text-primary: #ffffff;
+            --text-secondary: #92c0c9;
+        }
+        
+        /* 亮色模式覆盖（只在没有 dark 类时生效）*/
+        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
+        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
+        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
+        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
+        html:not(.dark) .text-white { color: #111827 !important; }
+        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        html:not(.dark) .text-gray-300 { color: #4b5563 !important; }
+        html:not(.dark) .hover\:text-white:hover { color: #111827 !important; }
+
+        /* 暗色模式保持原样 */
+        html.dark .bg-surface-dark { background-color: #16282b; }
+        html.dark .bg-card-dark { background-color: #1a3035; }
+        html.dark .bg-input-bg { background-color: #192f33; }
+        html.dark .border-input-border { border-color: #325e67; }
+        html.dark .text-text-secondary { color: #92c0c9; }
+        html.dark .bg-background-dark { background-color: #101f22; }
+        
+        /* 确保中文字体正确显示 */
+        body, * {
+            font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
+
+<div id="app" class="flex h-screen" v-cloak>
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-white dark:bg-surface-dark border-r border-gray-200 dark:border-input-border flex flex-col">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-input-border">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">analytics</span>
+                </div>
+                <span class="font-bold text-lg">数据分析系统</span>
+            </div>
+        </div>
+        
+        <!-- 菜单 -->
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs text-text-secondary uppercase tracking-wider">主菜单</div>
+            <a href="index.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary">
+                <span class="material-symbols-outlined text-xl">home</span>首页
+            </a>
+            <a href="dashboard.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">dashboard</span>数据仪表盘
+            </a>
+            <a href="prediction.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">trending_up</span>热点预测
+            </a>
+            <a href="compare.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">compare_arrows</span>商品对比
+            </a>
+            <a href="favorites.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">favorite</span>我的收藏
+            </a>
+            <a href="ai_assistant.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">smart_toy</span>AI 智能助手
+            </a>
+            <a v-if="hasCrawlerPerm" href="crawler.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">bug_report</span>爬虫任务
+            </a>
+            <a href="settings.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white">
+                <span class="material-symbols-outlined text-xl">settings</span>{{ isAdmin ? '系统设置' : '个人中心' }}
+            </a>
+        </nav>
+        
+        <!-- 用户信息 -->
+        <div class="p-4 border-t border-input-border">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ user?.nickname || user?.username }}</div>
+                    <div class="text-xs text-text-secondary">{{ user?.roles?.[0]?.name || '用户' }}</div>
+                </div>
+                <button @click="handleLogout" class="p-2 hover:bg-input-bg rounded-lg transition-colors" title="退出登录">
+                    <span class="material-symbols-outlined text-text-secondary hover:text-red-400">logout</span>
+                </button>
+            </div>
+            <!-- 主题切换按钮 -->
+            <button @click="toggleTheme" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-input-bg hover:bg-primary/10 rounded-lg transition-colors">
+                <span v-if="isDark" class="material-symbols-outlined text-yellow-400">light_mode</span>
+                <span v-else class="material-symbols-outlined text-primary">dark_mode</span>
+                <span class="text-sm">{{ isDark ? '亮色模式' : '暗色模式' }}</span>
+            </button>
+        </div>
+    </aside>
+    
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- 顶部栏 -->
+        <header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-input-border flex items-center justify-between px-6">
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ currentMenu?.name || '首页' }}</h1>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-600 dark:text-text-secondary">{{ currentTime }}</span>
+            </div>
+        </header>
+        
+        <!-- 内容区 -->
+        <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-background-dark">
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div v-for="stat in stats" :key="stat.label" 
+                     class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-gray-600 dark:text-text-secondary text-sm">{{ stat.label }}</span>
+                        <span :class="['material-symbols-outlined text-2xl', stat.color]">{{ stat.icon }}</span>
+                    </div>
+                    <div class="text-3xl font-bold mb-1 text-gray-900 dark:text-white">{{ stat.value }}</div>
+                    <div class="text-xs text-gray-600 dark:text-text-secondary">{{ stat.desc }}</div>
+                </div>
+            </div>
+            
+            <!-- 商品列表 -->
+            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border mb-6">
+                <!-- 标题和操作栏 -->
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">商品列表</h2>
+                    <div class="flex items-center gap-2">
+                        <!-- 搜索框 -->
+                        <div class="relative">
+                            <input 
+                                v-model="searchQuery" 
+                                @keyup.enter="searchGoods"
+                                type="text" 
+                                placeholder="搜索商品ID或名称..."
+                                class="w-64 px-4 py-1.5 pl-10 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary focus:outline-none">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm">search</span>
+                        </div>
+                        <button 
+                            @click="searchGoods" 
+                            :disabled="!searchQuery.trim()"
+                            class="px-4 py-1.5 bg-primary text-background-dark rounded-lg text-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
+                            搜索
+                        </button>
+                        <button 
+                            v-if="isSearchMode"
+                            @click="clearSearch" 
+                            class="px-3 py-1.5 bg-input-bg hover:bg-primary/10 rounded-lg text-sm transition-colors">
+                            清除
+                        </button>
+                        <button @click="refreshGoods" class="px-3 py-1.5 bg-input-bg hover:bg-primary/10 rounded-lg text-sm transition-colors">
+                            <span class="material-symbols-outlined text-base">refresh</span>
+                        </button>
+                        <select v-model="goodsSort" @change="loadGoods" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm">
+                            <option value="created_at">最新</option>
+                            <option value="price">价格</option>
+                            <option value="cos_fee">佣金</option>
+                            <option value="view_num">浏览量</option>
+                        </select>
+                        <!-- 数据导出 -->
+                        <div class="relative" style="display: inline-block;">
+                            <button @click="showExportMenu = !showExportMenu"
+                                    class="flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20">
+                                <span class="material-symbols-outlined text-base">download</span>导出
+                            </button>
+                            <div v-if="showExportMenu" class="absolute right-0 top-full mt-1 bg-card-dark border border-input-border rounded-lg shadow-lg z-10 py-1 min-w-[120px]">
+                                <button @click="exportData('csv'); showExportMenu = false"
+                                        class="w-full text-left px-4 py-2 text-sm hover:bg-input-bg">导出 CSV</button>
+                                <button @click="exportData('json'); showExportMenu = false"
+                                        class="w-full text-left px-4 py-2 text-sm hover:bg-input-bg">导出 JSON</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 搜索结果提示 -->
+                <div v-if="isSearchMode" class="mb-4 px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg text-sm">
+                    <span class="text-primary">搜索 "{{ searchQuery }}" 的结果：找到 {{ goodsTotal }} 个商品</span>
+                </div>
+                
+                <!-- 时间过滤 -->
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="text-sm text-text-secondary">时间范围:</span>
+                    <input v-model="filterStartDate" type="date"
+                           class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary focus:outline-none">
+                    <span class="text-text-secondary">-</span>
+                    <input v-model="filterEndDate" type="date"
+                           class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary focus:outline-none">
+                    <button @click="goodsPage = 1; loadGoods()"
+                            class="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20">筛选</button>
+                    <button v-if="filterStartDate || filterEndDate"
+                            @click="filterStartDate = ''; filterEndDate = ''; goodsPage = 1; loadGoods()"
+                            class="px-3 py-1.5 bg-input-bg text-text-secondary rounded-lg text-sm hover:bg-primary/10">清除</button>
+                </div>
+
+                <!-- 分类筛选 -->
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <button @click="selectedCategory = ''; loadGoods()" 
+                            :class="['px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                                     selectedCategory === '' ? 'bg-primary text-background-dark' : 'bg-input-bg hover:bg-primary/10 text-text-secondary']">
+                        全部
+                    </button>
+                    <button v-for="category in categories" :key="category"
+                            @click="selectedCategory = category; loadGoods()" 
+                            :class="['px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                                     selectedCategory === category ? 'bg-primary text-background-dark' : 'bg-input-bg hover:bg-primary/10 text-text-secondary']">
+                        {{ category }}
+                    </button>
+                </div>
+                
+                <!-- 商品网格 -->
+                <div v-if="goodsList.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+                    <div v-for="goods in goodsList" :key="goods.product_id" 
+                         @click="openGoodsDetail(goods.product_id)"
+                         class="bg-input-bg rounded-lg overflow-hidden border border-input-border hover:border-primary transition-all cursor-pointer group">
+                        <!-- 商品图片 -->
+                        <div class="relative aspect-square overflow-hidden bg-surface-dark">
+                            <img :src="goods.cover" :alt="goods.title" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                 @error="$event.target.src='https://via.placeholder.com/400x400?text=No+Image'">
+                            <!-- 标签 -->
+                            <div v-if="goods.labels && goods.labels.length > 0" class="absolute top-2 left-2 flex flex-wrap gap-1">
+                                <span v-for="(label, idx) in goods.labels.slice(0, 2)" :key="idx"
+                                      class="px-2 py-0.5 bg-primary/90 text-background-dark text-xs rounded">
+                                    {{ typeof label === 'string' ? label : label.name }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 商品信息 -->
+                        <div class="p-3">
+                            <!-- 标题 -->
+                            <h3 class="text-sm font-medium line-clamp-2 mb-2 min-h-[2.5rem]">{{ goods.title }}</h3>
+                            
+                            <!-- 价格和佣金 -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-red-400 text-lg font-bold">¥{{ (goods.price || 0).toFixed(2) }}</span>
+                                    <span v-if="(goods.coupon || 0) > 0" class="text-xs text-text-secondary line-through">¥{{ ((goods.price || 0) + (goods.coupon || 0)).toFixed(2) }}</span>
+                                </div>
+                                <div class="text-xs text-primary">
+                                    佣金 ¥{{ (goods.cos_fee || 0).toFixed(2) }}
+                                </div>
+                            </div>
+                            
+                            <!-- 店铺和销量 -->
+                            <div class="flex items-center justify-between text-xs text-text-secondary">
+                                <span class="truncate flex-1">{{ goods.shop_name || '未知店铺' }}</span>
+                                <span class="ml-2">销量 {{ (goods.sales || 0).toLocaleString() }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-else class="text-center py-12 text-text-secondary">
+                    <span class="material-symbols-outlined text-6xl mb-4 opacity-50">inventory_2</span>
+                    <p>暂无商品数据</p>
+                    <p class="text-sm mt-2">请先运行爬虫获取数据</p>
+                </div>
+                
+                <!-- 分页 -->
+                <div v-if="goodsTotal > 0" class="flex items-center justify-between pt-4 border-t border-input-border">
+                    <div class="text-sm text-text-secondary">
+                        共 {{ goodsTotal }} 个商品，第 {{ goodsPage }}/{{ goodsTotalPages }} 页
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="goodsPage > 1 && (goodsPage--, loadGoods())" 
+                                :disabled="goodsPage <= 1"
+                                class="px-3 py-1.5 bg-input-bg hover:bg-primary/10 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            上一页
+                        </button>
+                        <button @click="goodsPage < goodsTotalPages && (goodsPage++, loadGoods())" 
+                                :disabled="goodsPage >= goodsTotalPages"
+                                class="px-3 py-1.5 bg-input-bg hover:bg-primary/10 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            下一页
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快捷操作 - 仅管理员可见 -->
+            <div v-if="hasPermission('crawler:start')" class="bg-card-dark rounded-xl p-6 border border-input-border mb-6">
+                <h2 class="text-lg font-semibold mb-4">快捷操作</h2>
+                <div class="flex flex-wrap gap-4">
+                    <button @click="startListCrawler" 
+                            :disabled="crawlerLoading"
+                            class="flex items-center gap-2 px-4 py-2 bg-primary text-background-dark rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        <span class="material-symbols-outlined text-xl">play_arrow</span>
+                        启动列表爬虫
+                    </button>
+                    <button @click="showCrawlerConfig = true"
+                            class="flex items-center gap-2 px-4 py-2 bg-input-bg border border-input-border rounded-lg hover:border-primary transition-colors">
+                        <span class="material-symbols-outlined text-xl">settings</span>
+                        爬虫配置
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 系统状态 - 仅管理员可见 -->
+            <div v-if="hasPermission('crawler:start')" class="bg-card-dark rounded-xl p-6 border border-input-border">
+                <h2 class="text-lg font-semibold mb-4">系统状态</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-input-bg rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-green-400">check_circle</span>
+                            <span>后端服务</span>
+                        </div>
+                        <span class="text-green-400 text-sm">运行中</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-input-bg rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span :class="['material-symbols-outlined', mqStatus ? 'text-green-400' : 'text-red-400']">
+                                {{ mqStatus ? 'check_circle' : 'error' }}
+                            </span>
+                            <span>RabbitMQ</span>
+                        </div>
+                        <span :class="[mqStatus ? 'text-green-400' : 'text-red-400', 'text-sm']">
+                            {{ mqStatus ? '已连接' : '未连接' }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-input-bg rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-green-400">check_circle</span>
+                            <span>数据库</span>
+                        </div>
+                        <span class="text-green-400 text-sm">已连接</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 爬虫配置弹窗 -->
+    <div v-if="showCrawlerConfig"
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+         @click.self="showCrawlerConfig = false">
+        <div class="bg-card-dark rounded-xl p-6 border border-input-border w-full max-w-md mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">爬虫配置</h3>
+                <button @click="showCrawlerConfig = false" 
+                        class="p-1 hover:bg-input-bg rounded-lg transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-text-secondary mb-2">起始页</label>
+                    <input v-model.number="crawlerConfig.start_page" 
+                           type="number" 
+                           min="1"
+                           class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg focus:border-primary focus:outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-sm text-text-secondary mb-2">结束页</label>
+                    <input v-model.number="crawlerConfig.end_page" 
+                           type="number" 
+                           min="1"
+                           class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg focus:border-primary focus:outline-none">
+                </div>
+                
+                <div class="flex items-center gap-3 pt-4">
+                    <button @click="startListCrawler(); showCrawlerConfig = false" 
+                            :disabled="crawlerLoading"
+                            class="flex-1 px-4 py-2 bg-primary text-background-dark rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        启动爬虫
+                    </button>
+                    <button @click="showCrawlerConfig = false" 
+                            class="flex-1 px-4 py-2 bg-input-bg border border-input-border rounded-lg hover:border-primary transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI 智能助手浮动组件 -->
+<div id="aiAssistant" v-cloak>
+    <!-- 浮动按钮 -->
+    <div class="ai-float-button" @mousedown="startDrag" @click="toggleChat">
+        <span class="material-symbols-outlined icon">smart_toy</span>
+    </div>
+    
+    <!-- 聊天窗口 -->
+    <div v-if="showChat" class="ai-chat-window" :class="{ minimized: isMinimized }">
+        <!-- 头部 -->
+        <div class="ai-chat-header">
+            <div class="title">
+                <span class="material-symbols-outlined">smart_toy</span>
+                <span>AI 智能助手</span>
+            </div>
+            <div class="actions">
+                <div class="action-btn" @click.stop="isMinimized = !isMinimized">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">
+                        {{ isMinimized ? 'expand_more' : 'remove' }}
+                    </span>
+                </div>
+                <div class="action-btn" @click.stop="closeChat">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 消息区域 -->
+        <div v-show="!isMinimized" class="ai-chat-messages" ref="messagesContainer">
+            <!-- 欢迎消息 -->
+            <div v-if="messages.length === 0" class="ai-message">
+                <div class="avatar">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <div class="content">
+                    <div>你好！我是AI智能助手，可以帮你分析商品数据、推荐热门商品。有什么我可以帮你的吗？</div>
+                </div>
+            </div>
+            
+            <!-- 聊天消息 -->
+            <div v-for="(msg, index) in messages" :key="index" class="ai-message" :class="msg.role">
+                <div class="avatar">
+                    <span class="material-symbols-outlined">
+                        {{ msg.role === 'user' ? 'person' : 'smart_toy' }}
+                    </span>
+                </div>
+                <div>
+                    <div class="content" v-html="formatMessage(msg.content)"></div>
+                    <div class="time">{{ formatTime(msg.time) }}</div>
+                </div>
+            </div>
+            
+            <!-- 加载中 -->
+            <div v-if="isLoading" class="ai-message">
+                <div class="avatar">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <div class="content">
+                    <div class="ai-typing">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快捷建议 -->
+        <div v-show="!isMinimized && messages.length === 0" class="ai-suggestions">
+            <div v-for="(suggestion, index) in suggestions" :key="index" 
+                 class="ai-suggestion-btn"
+                 @click="sendMessage(suggestion)">
+                {{ suggestion }}
+            </div>
+        </div>
+        
+        <!-- 输入区域 -->
+        <div v-show="!isMinimized" class="ai-chat-input">
+            <input 
+                v-model="inputMessage" 
+                @keyup.enter="sendMessage()"
+                placeholder="输入消息..."
+                :disabled="isLoading">
+            <button @click="sendMessage()" :disabled="isLoading || !inputMessage.trim()">
+                <span class="material-symbols-outlined">send</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* AI助手浮动按钮和窗口样式 */
+.ai-float-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #13c8ec 0%, #0fa8c9 100%);
+    box-shadow: 0 4px 20px rgba(19, 200, 236, 0.4);
+    cursor: move;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.ai-float-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 30px rgba(19, 200, 236, 0.6);
+}
+
+.ai-float-button.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+}
+
+.ai-float-button .icon {
+    font-size: 28px;
+    color: white;
+}
+
+.ai-chat-window {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 400px;
+    height: 600px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    /* 防止拖动后位置错乱 */
+    left: auto !important;
+    top: auto !important;
+}
+
+.dark .ai-chat-window {
+    background: #1a3035;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.ai-chat-window.minimized {
+    height: 60px;
+}
+
+.ai-chat-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #13c8ec 0%, #0fa8c9 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: move;
+    user-select: none;
+}
+
+.ai-chat-header .title {
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-chat-header .actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ai-chat-header .action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-chat-header .action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.ai-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f9fafb;
+}
+
+.dark .ai-chat-messages {
+    background: #16282b;
+}
+
+.ai-message {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ai-message.user {
+    flex-direction: row-reverse;
+}
+
+.ai-message .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #13c8ec;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.ai-message.user .avatar {
+    background: #8b5cf6;
+}
+
+.ai-message .content {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
+}
+
+.dark .ai-message .content {
+    background: #1a3035;
+    color: #e5e7eb;
+}
+
+.ai-message.user .content {
+    background: #13c8ec;
+    color: white;
+}
+
+.ai-message .time {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
+.ai-suggestions {
+    padding: 12px 20px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.dark .ai-suggestions {
+    background: #1a3035;
+    border-top-color: #325e67;
+}
+
+.ai-suggestions::-webkit-scrollbar {
+    height: 4px;
+}
+
+.ai-suggestion-btn {
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border-radius: 16px;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark .ai-suggestion-btn {
+    background: #192f33;
+    color: #a0c4cc;
+}
+
+.ai-suggestion-btn:hover {
+    background: #13c8ec;
+    color: white;
+}
+
+.ai-chat-input {
+    padding: 16px 20px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.dark .ai-chat-input {
+    background: #1a3035;
+    border-top-color: #325e67;
+}
+
+.ai-chat-input input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    outline: none;
+    font-size: 14px;
+    background: #f9fafb;
+}
+
+.dark .ai-chat-input input {
+    background: #16282b;
+    border-color: #325e67;
+    color: white;
+}
+
+.ai-chat-input input:focus {
+    border-color: #13c8ec;
+}
+
+.ai-chat-input button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #13c8ec;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.ai-chat-input button:hover {
+    background: #0fa8c9;
+    transform: scale(1.05);
+}
+
+.ai-chat-input button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ai-typing {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+}
+
+.ai-typing span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #13c8ec;
+    animation: typing 1.4s infinite;
+}
+
+.ai-typing span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.ai-typing span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-10px);
+    }
+}
+
+@media (max-width: 768px) {
+    .ai-chat-window {
+        width: calc(100vw - 40px);
+        height: calc(100vh - 140px);
+        right: 20px;
+        bottom: 90px;
+    }
+}
+</style>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch } = Vue
+
+const API_BASE = 'http://localhost:5001/api'
+
+createApp({
+    setup() {
+        const user = ref(null)
+        const isAdmin = ref(false)
+        const currentTime = ref('')
+        const mqStatus = ref(false)
+        const crawlerLoading = ref(false)
+        const showCrawlerConfig = ref(false)
+        const isDark = ref(true)
+        const hasCrawlerPerm = computed(() => hasPermission('crawler:start'))
+        
+        const crawlerConfig = reactive({
+            start_page: 1,
+            end_page: 20
+        })
+        
+        // 商品数据
+        const goodsList = ref([])
+        const goodsPage = ref(1)
+        const goodsPageSize = ref(20)
+        const goodsTotal = ref(0)
+        const goodsTotalPages = ref(0)
+        const goodsSort = ref('created_at')
+        const goodsLoading = ref(false)
+        const selectedCategory = ref('')  // 选中的分类
+        
+        // 搜索相关
+        const searchQuery = ref('')
+        const isSearchMode = ref(false)
+
+        // 时间过滤
+        const filterStartDate = ref('')
+        const filterEndDate = ref('')
+
+        // 导出菜单
+        const showExportMenu = ref(false)
+        
+        // 分类列表（从后端动态加载）
+        const categories = ref([])
+
+        const loadCategories = async () => {
+            try {
+                const result = await request('/goods/categories')
+                if (result.code === 0) {
+                    categories.value = result.data.map(c => c.name)
+                }
+            } catch (e) {
+                console.error('加载分类失败:', e)
+            }
+        }
+        
+        // 权限检查函数
+        const hasPermission = (permissionCode) => {
+            if (!user.value) return false  // 用户未加载，返回 false
+            if (!user.value.permissions) return false  // 没有权限列表，返回 false
+            return user.value.permissions.includes(permissionCode)
+        }
+        
+        const menuItems = [
+            { name: '首页', path: 'index.html', icon: 'home' },
+            { name: '数据仪表盘', path: 'dashboard.html', icon: 'dashboard' },
+            { name: '热点预测', path: 'prediction.html', icon: 'trending_up' },
+            { name: '商品对比', path: 'compare.html', icon: 'compare_arrows' },
+            { name: '我的收藏', path: 'favorites.html', icon: 'favorite' },
+            { name: 'AI 智能助手', path: 'ai_assistant.html', icon: 'smart_toy' },
+            { name: '爬虫任务', path: 'crawler.html', icon: 'bug_report', permission: 'crawler:start' },
+            { name: '系统设置', path: 'settings.html', icon: 'settings' },
+        ]
+        
+        // 根据权限过滤菜单
+        const filteredMenuItems = computed(() => {
+            return menuItems.filter(item => {
+                if (!item.permission) return true
+                return hasPermission(item.permission)
+            })
+        })
+        
+        const currentPath = ref('index.html')
+        const currentMenu = computed(() => filteredMenuItems.value.find(m => m.path === currentPath.value))
+        
+        const statsData = ref([
+            { label: '商品总数', value: '0', icon: 'inventory_2', color: 'text-primary', desc: '已采集商品' },
+            { label: '今日新增', value: '0', icon: 'add_circle', color: 'text-green-400', desc: '较昨日增长' },
+            { label: '平均价格', value: '¥0', icon: 'payments', color: 'text-purple-400', desc: '商品均价' },
+            { label: '平均佣金', value: '¥0', icon: 'account_balance_wallet', color: 'text-yellow-400', desc: '佣金均值' },
+        ])
+        
+        // 根据权限过滤统计卡片
+        const stats = computed(() => {
+            return statsData.value.filter(stat => {
+                if (!stat.permission) return true
+                return hasPermission(stat.permission)
+            })
+        })
+        
+        // 加载统计数据
+        const loadStats = async () => {
+            try {
+                const result = await request('/goods/stats')
+                if (result.code === 0) {
+                    const data = result.data
+                    statsData.value[0].value = data.total_goods.toLocaleString()
+                    statsData.value[1].value = data.today_count.toLocaleString()
+                    statsData.value[2].value = `¥${data.avg_price.toFixed(2)}`
+                    statsData.value[3].value = `¥${data.avg_commission.toFixed(2)}`
+                }
+            } catch (e) {
+                console.error('加载统计数据失败:', e)
+            }
+        }
+        
+        // 获取 token
+        const getToken = () => localStorage.getItem('token')
+        
+        // API 请求封装
+        const request = async (url, options = {}) => {
+            const token = getToken()
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...options.headers
+            }
+            
+            const response = await fetch(`${API_BASE}${url}`, {
+                ...options,
+                headers
+            })
+            
+            if (response.status === 401) {
+                // Token 过期，跳转登录
+                localStorage.removeItem('token')
+                localStorage.removeItem('user')
+                window.location.href = 'login.html'
+                return
+            }
+            
+            return response.json()
+        }
+        
+        // 检查登录状态
+        const checkAuth = () => {
+            const token = getToken()
+            const savedUser = localStorage.getItem('user')
+
+            if (!token || !savedUser) {
+                window.location.href = 'login.html'
+                return
+            }
+
+            user.value = JSON.parse(savedUser)
+            const roleCodes = user.value.roles?.map(r => r.code) || []
+            isAdmin.value = roleCodes.includes('admin')
+        }
+        
+        // 退出登录
+        const handleLogout = async () => {
+            await request('/auth/logout', { method: 'POST' })
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = 'login.html'
+        }
+        
+        // 加载商品列表
+        const loadGoods = async () => {
+            goodsLoading.value = true
+            try {
+                let url
+                
+                // 如果是搜索模式，使用搜索API
+                if (isSearchMode.value && searchQuery.value.trim()) {
+                    url = `/goods/search?q=${encodeURIComponent(searchQuery.value.trim())}&page=${goodsPage.value}&page_size=${goodsPageSize.value}`
+                } else {
+                    // 普通列表模式
+                    url = `/goods/list?page=${goodsPage.value}&page_size=${goodsPageSize.value}&sort_by=${goodsSort.value}&order=desc`
+
+                    // 添加分类筛选
+                    if (selectedCategory.value) {
+                        url += `&category=${encodeURIComponent(selectedCategory.value)}`
+                    }
+
+                    // 添加时间过滤
+                    if (filterStartDate.value) {
+                        url += `&start_date=${filterStartDate.value}`
+                    }
+                    if (filterEndDate.value) {
+                        url += `&end_date=${filterEndDate.value}`
+                    }
+                }
+                
+                const result = await request(url)
+                
+                if (result.code === 0) {
+                    goodsList.value = result.data.list
+                    goodsTotal.value = result.data.total
+                    goodsTotalPages.value = result.data.total_pages
+                    
+                    // 解析JSON字段
+                    goodsList.value.forEach(goods => {
+                        if (typeof goods.labels === 'string') {
+                            try {
+                                goods.labels = JSON.parse(goods.labels)
+                            } catch (e) {
+                                goods.labels = []
+                            }
+                        }
+                        if (typeof goods.tags === 'string') {
+                            try {
+                                goods.tags = JSON.parse(goods.tags)
+                            } catch (e) {
+                                goods.tags = {}
+                            }
+                        }
+                    })
+                } else {
+                    Toast.error('加载商品失败: ' + result.msg)
+                }
+            } catch (e) {
+                console.error('加载商品失败:', e)
+                Toast.error('加载商品失败: ' + e.message)
+            } finally {
+                goodsLoading.value = false
+            }
+        }
+        
+        // 刷新商品
+        const refreshGoods = () => {
+            goodsPage.value = 1
+            loadGoods()
+        }
+        
+        // 搜索商品
+        const searchGoods = () => {
+            const query = searchQuery.value.trim()
+            if (!query) {
+                Toast.warning('请输入搜索关键词')
+                return
+            }
+            
+            isSearchMode.value = true
+            goodsPage.value = 1
+            selectedCategory.value = ''  // 清除分类筛选
+            loadGoods()
+        }
+        
+        // 清除搜索
+        const clearSearch = () => {
+            searchQuery.value = ''
+            isSearchMode.value = false
+            goodsPage.value = 1
+            loadGoods()
+        }
+        
+        // 打开商品详情（新标签页）
+        const openGoodsDetail = (productId) => {
+            window.open(`goods_detail.html?id=${productId}`, '_blank')
+        }
+
+        // 导出数据
+        const exportData = (format) => {
+            let url = `${API_BASE}/export/goods/${format}?limit=1000`
+            if (filterStartDate.value) url += `&start_date=${filterStartDate.value}`
+            if (filterEndDate.value) url += `&end_date=${filterEndDate.value}`
+            if (selectedCategory.value) url += `&category=${encodeURIComponent(selectedCategory.value)}`
+            if (isSearchMode.value && searchQuery.value.trim()) url += `&keyword=${encodeURIComponent(searchQuery.value.trim())}`
+
+            // 使用 fetch 下载（带 token）
+            const token = getToken()
+            fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(res => {
+                // 检查权限错误
+                if (res.status === 403) {
+                    return res.json().then(data => {
+                        throw new Error('您没有权限访问此功能')
+                    })
+                }
+                if (!res.ok) throw new Error('导出失败')
+                const disposition = res.headers.get('Content-Disposition')
+                const filename = disposition ? disposition.split('filename=')[1] : `export.${format}`
+                return res.blob().then(blob => ({ blob, filename }))
+            }).then(({ blob, filename }) => {
+                const a = document.createElement('a')
+                a.href = URL.createObjectURL(blob)
+                a.download = filename
+                a.click()
+                URL.revokeObjectURL(a.href)
+                Toast.success(`${format.toUpperCase()} 导出成功`)
+            }).catch(e => {
+                Toast.error(e.message || '导出失败，请重试')
+            })
+        }
+        
+        // 启动列表爬虫
+        const startListCrawler = async () => {
+            crawlerLoading.value = true
+            try {
+                const result = await request('/mq/start_list_crawler', {
+                    method: 'POST',
+                    body: JSON.stringify(crawlerConfig)
+                })
+                
+                if (result.success) {
+                    Toast.success(`任务已发送！任务ID: ${result.data.task_id}`)
+                    if (result.data.note) {
+                        setTimeout(() => Toast.info(result.data.note), 500)
+                    }
+                    // 延迟刷新商品列表
+                    setTimeout(() => {
+                        refreshGoods()
+                    }, 3000)
+                } else {
+                    Toast.error('发送失败: ' + result.message)
+                }
+            } catch (e) {
+                Toast.error('请求失败: ' + e.message)
+            } finally {
+                crawlerLoading.value = false
+            }
+        }
+        
+        // 更新时间
+        let timeInterval
+        const updateTime = () => {
+            const now = new Date()
+            currentTime.value = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+        }
+        
+        // 检查 MQ 状态
+        const checkMqStatus = async () => {
+            try {
+                const result = await request('/health')
+                mqStatus.value = result.success
+            } catch {
+                mqStatus.value = false
+            }
+        }
+        
+        onMounted(() => {
+            checkAuth()
+            updateTime()
+            timeInterval = setInterval(updateTime, 1000)
+            checkMqStatus()
+            loadGoods()
+            loadStats()
+            loadCategories()
+
+            // 初始化主题
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'light') {
+                isDark.value = false
+                document.documentElement.classList.remove('dark')
+            } else {
+                isDark.value = true
+                document.documentElement.classList.add('dark')
+            }
+        })
+        
+        onUnmounted(() => {
+            clearInterval(timeInterval)
+        })
+        
+        // 切换主题
+        // 切换主题
+        const toggleTheme = () => {
+            isDark.value = !isDark.value
+            if (isDark.value) {
+                document.documentElement.classList.add('dark')
+                localStorage.setItem('theme', 'dark')
+            } else {
+                document.documentElement.classList.remove('dark')
+                localStorage.setItem('theme', 'light')
+            }
+        }
+        
+        return {
+            user,
+            isAdmin,
+            currentTime,
+            menuItems,
+            filteredMenuItems,
+            currentPath,
+            currentMenu,
+            stats,
+            mqStatus,
+            crawlerLoading,
+            showCrawlerConfig,
+            crawlerConfig,
+            isDark,
+            goodsList,
+            goodsPage,
+            goodsPageSize,
+            goodsTotal,
+            goodsTotalPages,
+            goodsSort,
+            goodsLoading,
+            selectedCategory,
+            categories,
+            searchQuery,
+            isSearchMode,
+            hasPermission,
+            hasCrawlerPerm,
+            handleLogout,
+            startListCrawler,
+            toggleTheme,
+            loadGoods,
+            refreshGoods,
+            searchGoods,
+            clearSearch,
+            openGoodsDetail,
+            filterStartDate,
+            filterEndDate,
+            showExportMenu,
+            exportData
+        }
+    }
+}).mount('#app')
+
+// AI助手组件
+createApp({
+    data() {
+        return {
+            showChat: false,
+            isMinimized: false,
+            messages: [],
+            inputMessage: '',
+            isLoading: false,
+            sessionId: '',
+            suggestions: [],
+            isDragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            buttonX: 0,
+            buttonY: 0
+        }
+    },
+    mounted() {
+        this.loadSuggestions()
+        this.sessionId = localStorage.getItem('ai_session_id') || this.generateSessionId()
+        localStorage.setItem('ai_session_id', this.sessionId)
+        this.loadHistory()
+        document.addEventListener('mousemove', this.onDrag)
+        document.addEventListener('mouseup', this.stopDrag)
+    },
+    beforeUnmount() {
+        document.removeEventListener('mousemove', this.onDrag)
+        document.removeEventListener('mouseup', this.stopDrag)
+    },
+    methods: {
+        generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+        },
+        
+        async loadSuggestions() {
+            try {
+                const token = localStorage.getItem('token')
+                const response = await fetch('http://localhost:5001/api/ai/suggestions', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const result = await response.json()
+                if (result.success) {
+                    this.suggestions = result.data
+                }
+            } catch (e) {
+                console.error('加载建议失败:', e)
+            }
+        },
+        
+        async loadHistory() {
+            try {
+                const token = localStorage.getItem('token')
+                const response = await fetch(`http://localhost:5001/api/ai/history?session_id=${this.sessionId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const result = await response.json()
+                if (result.success && result.data.length > 0) {
+                    this.messages = result.data.map(msg => ({
+                        role: msg.role,
+                        content: msg.content,
+                        time: new Date()
+                    }))
+                    this.$nextTick(() => {
+                        this.scrollToBottom()
+                    })
+                }
+            } catch (e) {
+                console.error('加载历史失败:', e)
+            }
+        },
+        
+        async sendMessage(text) {
+            const message = text || this.inputMessage.trim()
+            if (!message || this.isLoading) return
+            
+            this.messages.push({
+                role: 'user',
+                content: message,
+                time: new Date()
+            })
+            
+            this.inputMessage = ''
+            this.isLoading = true
+            
+            // 添加空的AI消息用于流式更新
+            const aiMessageIndex = this.messages.length
+            this.messages.push({
+                role: 'assistant',
+                content: '',
+                time: new Date()
+            })
+            
+            this.$nextTick(() => {
+                this.scrollToBottom()
+            })
+            
+            try {
+                const token = localStorage.getItem('token')
+                const response = await fetch('http://localhost:5001/api/ai/chat/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: this.sessionId
+                    })
+                })
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`)
+                }
+                
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+                let buffer = ''
+                
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    
+                    buffer += decoder.decode(value, { stream: true })
+                    const lines = buffer.split('\n')
+                    buffer = lines.pop() // 保留不完整的行
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim()
+                            if (data === '[DONE]') {
+                                break
+                            }
+                            
+                            try {
+                                const parsed = JSON.parse(data)
+                                if (parsed.content) {
+                                    this.messages[aiMessageIndex].content += parsed.content
+                                    this.$nextTick(() => {
+                                        this.scrollToBottom()
+                                    })
+                                } else if (parsed.error) {
+                                    throw new Error(parsed.error)
+                                }
+                            } catch (e) {
+                                console.error('Parse error:', e)
+                            }
+                        }
+                    }
+                }
+                
+            } catch (e) {
+                console.error('发送消息失败:', e)
+                this.messages[aiMessageIndex].content = '抱歉，我遇到了一些问题。请稍后再试。'
+            } finally {
+                this.isLoading = false
+            }
+        },
+        
+        formatMessage(content) {
+            return content
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        },
+        
+        formatTime(time) {
+            const now = new Date()
+            const diff = now - time
+            
+            if (diff < 60000) return '刚刚'
+            if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+            
+            return time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        },
+        
+        scrollToBottom() {
+            if (this.$refs.messagesContainer) {
+                this.$refs.messagesContainer.scrollTop = this.$refs.messagesContainer.scrollHeight
+            }
+        },
+        
+        toggleChat() {
+            if (!this.isDragging) {
+                this.showChat = !this.showChat
+                if (this.showChat) {
+                    this.$nextTick(() => {
+                        this.scrollToBottom()
+                    })
+                }
+            }
+        },
+        
+        closeChat() {
+            this.showChat = false
+        },
+        
+        startDrag(e) {
+            this.isDragging = true
+            this.dragStartX = e.clientX - this.buttonX
+            this.dragStartY = e.clientY - this.buttonY
+            e.target.closest('.ai-float-button').classList.add('dragging')
+        },
+        
+        onDrag(e) {
+            if (this.isDragging) {
+                e.preventDefault()
+                this.buttonX = e.clientX - this.dragStartX
+                this.buttonY = e.clientY - this.dragStartY
+                
+                const button = document.querySelector('.ai-float-button')
+                if (button) {
+                    button.style.right = 'auto'
+                    button.style.bottom = 'auto'
+                    button.style.left = this.buttonX + 'px'
+                    button.style.top = this.buttonY + 'px'
+                }
+            }
+        },
+        
+        stopDrag(e) {
+            if (this.isDragging) {
+                this.isDragging = false
+                const button = document.querySelector('.ai-float-button')
+                if (button) {
+                    button.classList.remove('dragging')
+                }
+            }
+        }
+    }
+}).mount('#aiAssistant')
+</script>
+
+</body>
+</html>
