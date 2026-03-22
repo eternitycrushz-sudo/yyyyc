@@ -370,3 +370,88 @@ def test_proxy():
             'success': False,
             'message': f'代理连接失败: {str(e)}'
         }), 500
+
+
+# ============================================
+# Redis 去重缓存管理
+# ============================================
+
+@crawler_bp.route('/dedup/clear', methods=['POST'])
+@login_required
+@permission_required('crawler:clean')
+def clear_redis_dedup():
+    """
+    清除 Redis 中的商品去重缓存
+
+    POST /api/crawler/dedup/clear
+    Body: {
+        "key_pattern": "crawler:seen_products"  // 可选，默认清除所有去重key
+    }
+    """
+    try:
+        import redis
+        redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        redis_client.ping()
+
+        data = request.get_json() or {}
+        key_pattern = data.get('key_pattern', 'crawler:seen_products*')
+
+        # 扫描并删除匹配的 key
+        deleted_count = 0
+        for key in redis_client.scan_iter(match=key_pattern):
+            redis_client.delete(key)
+            deleted_count += 1
+
+        return jsonify({
+            'success': True,
+            'message': f'已清除 {deleted_count} 个去重缓存',
+            'data': {'deleted_count': deleted_count}
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'清除缓存失败: {str(e)}'
+        }), 500
+
+
+@crawler_bp.route('/dedup/status', methods=['GET'])
+@login_required
+@permission_required('crawler:view')
+def get_dedup_status():
+    """
+    获取 Redis 去重缓存统计
+
+    GET /api/crawler/dedup/status
+    """
+    try:
+        import redis
+        redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        redis_client.ping()
+
+        total_keys = 0
+        total_items = 0
+        keys_info = {}
+
+        for key in redis_client.scan_iter(match='crawler:seen_products*'):
+            count = redis_client.scard(key)
+            keys_info[key] = count
+            total_items += count
+            total_keys += 1
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'redis_status': 'connected',
+                'total_keys': total_keys,
+                'total_items': total_items,
+                'keys_info': keys_info
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': True,
+            'data': {
+                'redis_status': 'disconnected',
+                'message': f'Redis 连接失败: {str(e)}'
+            }
+        }), 500
