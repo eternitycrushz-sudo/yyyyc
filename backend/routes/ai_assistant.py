@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from zhipuai import ZhipuAI
+    import httpx
     ZHIPU_AVAILABLE = True
 except ImportError:
     ZHIPU_AVAILABLE = False
@@ -23,9 +24,21 @@ except ImportError:
 
 ai_bp = Blueprint('ai', __name__)
 
-# 初始化智谱 AI 客户端
+# 初始化智谱 AI 客户端（不使用代理）
 if ZHIPU_AVAILABLE:
-    client = ZhipuAI(api_key=Config.ZHIPU_API_KEY)
+    # 创建不使用系统代理的 httpx 客户端
+    http_client = httpx.Client(
+        mounts={
+            "https://": httpx.HTTPTransport(proxy=None),
+            "http://": httpx.HTTPTransport(proxy=None),
+        },
+        verify=True,
+        timeout=30
+    )
+    client = ZhipuAI(
+        api_key=Config.ZHIPU_API_KEY,
+        http_client=http_client
+    )
 
 
 def get_database_context(user_message, product_id=None):
@@ -323,9 +336,9 @@ def get_ai_chat_message(user_id, session_id, limit=10):
         messages = cursor.fetchall()
         cursor.close()
         conn.close()
-        
+
         # 反转顺序（从旧到新）
-        return [{'role': m['role'], 'content': m['content']} for m in reversed(messages)]
+        return [{'role': m['role'], 'content': m['content'], 'created_at': str(m['created_at'])} for m in reversed(messages)]
     except Exception as e:
         print(f"获取聊天历史失败: {e}")
         return []
@@ -388,17 +401,23 @@ def chat_stream():
     
     def generate_stream():
         try:
+            print(f"[AI Stream] Starting stream for user {user_id}, message: {user_message[:50]}")
+
             # 创建或获取会话
             session_id_final = create_or_get_session(user_id, session_id)
-            
+            print(f"[AI Stream] Session created/retrieved: {session_id_final}")
+
             # 保存用户消息
             save_chat_message(user_id, session_id_final, 'user', user_message)
-            
+            print(f"[AI Stream] User message saved")
+
             # 获取数据库上下文
             db_context = get_database_context(user_message, product_id)
-            
+            print(f"[AI Stream] Database context retrieved, length: {len(db_context)}")
+
             # 获取历史对话
             history = get_ai_chat_message(user_id, session_id_final, limit=10)
+            print(f"[AI Stream] History retrieved, count: {len(history)}")
             
             # 构建消息列表
             system_content = f"""你是抖音电商热点数据分析系统的智能助手。你的职责是：
@@ -421,15 +440,24 @@ def chat_stream():
                 messages.extend(history[:-1])
             
             messages.append({"role": "user", "content": user_message})
-            
+            print(f"[AI Stream] Messages prepared, count: {len(messages)}")
+
             # 调用智谱 AI 流式接口
-            response = client.chat.completions.create(
-                model="glm-4-flash",
-                messages=messages,
-                temperature=0.7,
-                max_tokens=2000,
-                stream=True  # 启用流式输出
-            )
+            print(f"[AI Stream] Calling ZhipuAI API with glm-4-flash model")
+            try:
+                response = client.chat.completions.create(
+                    model="glm-4-flash",
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=2000,
+                    stream=True  # 启用流式输出
+                )
+                print(f"[AI Stream] API response received")
+            except Exception as api_error:
+                print(f"[AI Stream] API Error: {api_error}")
+                import traceback
+                traceback.print_exc()
+                raise
             
             full_reply = ""
             
@@ -438,9 +466,9 @@ def chat_stream():
                 if chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
                     full_reply += content
-                    
+
                     # 发送流式数据
-                    yield f"data: {json.dumps({'content': content})}\n\n"
+                    yield f"data: {json.dumps({'content': content}, ensure_ascii=False)}\n\n"
             
             # 保存完整的AI回复
             save_chat_message(user_id, session_id_final, 'assistant', full_reply)
@@ -452,11 +480,11 @@ def chat_stream():
             print(f"[AI Stream] 错误: {e}")
             import traceback
             traceback.print_exc()
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
     
     return Response(
         generate_stream(),
-        mimetype='text/plain',
+        mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',

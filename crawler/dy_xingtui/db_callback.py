@@ -157,11 +157,35 @@ class DBCallback:
         data = item.copy()
         data['in_stock'] = 1 if item.get('in_stock') else 0
         data['other_platform'] = 1 if item.get('other_platform') else 0
-        
+
+        # 推断分类并添加到标签
+        inferred_category = _get_category(item.get('first_cid'), item.get('title', ''))
+        labels = data.get('labels', [])
+        if isinstance(labels, str):
+            try:
+                labels = json.loads(labels)
+            except:
+                labels = []
+
+        # 确保labels是list
+        if not isinstance(labels, list):
+            labels = []
+
+        # 检查是否已有category标签，如果没有则添加
+        has_category = any(label.get('id') == 'category' for label in labels if isinstance(label, dict))
+        if not has_category:
+            labels.append({
+                'id': 'category',
+                'name': inferred_category,
+                'isSystem': 0
+            })
+
+        data['labels'] = labels
+
         for field in ['imgs', 'labels', 'tags', 'shop_total_score']:
             if field in data and data[field] is not None:
                 data[field] = json.dumps(data[field], ensure_ascii=False)
-        
+
         return data
     
     def save_page(self, page: int, page_data: Dict[str, Any]):
@@ -207,12 +231,11 @@ class DBCallback:
             'is_redu', 'is_sole', 'issue_ratio', 'favorite_id',
             'imgs', 'labels', 'tags', 'shop_total_score'
         ]
-        gl_all_fields = gl_fields + ['category_name']
-        gl_placeholders = ', '.join(['%s'] * len(gl_all_fields))
-        gl_update_fields = [f for f in gl_all_fields if f != 'product_id']
+        gl_placeholders = ', '.join(['%s'] * len(gl_fields))
+        gl_update_fields = [f for f in gl_fields if f != 'product_id']
         gl_update_clause = ', '.join([f"`{f}`=VALUES(`{f}`)" for f in gl_update_fields])
         gl_sql = f"""
-            INSERT INTO goods_list (goods_id, {', '.join(f'`{f}`' for f in gl_all_fields)})
+            INSERT INTO goods_list (goods_id, {', '.join(f'`{f}`' for f in gl_fields)})
             VALUES (%s, {gl_placeholders})
             ON DUPLICATE KEY UPDATE {gl_update_clause}
         """
@@ -227,12 +250,11 @@ class DBCallback:
 
                     # 同步写入 goods_list
                     product_id = data.get('product_id')
-                    category_name = _get_category(data.get('first_cid'), data.get('title', ''))
-                    gl_values = [product_id] + [data.get(f) for f in gl_fields] + [category_name]
+                    gl_values = [product_id] + [data.get(f) for f in gl_fields]
                     try:
                         cursor.execute(gl_sql, gl_values)
                     except Exception as e2:
-                        log.warning(f"同步 goods_list 失败(product_id={product_id}): {e2}")
+                        log.error(f"同步 goods_list 失败(product_id={product_id}): {e2}")
 
             conn.commit()
             log.info(f"第{page}页数据保存成功，共{len(items)}条（已同步 goods_list）")

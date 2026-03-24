@@ -33,7 +33,7 @@ class Config:
     PROXY_URL = os.getenv('PROXY_URL', '')
     
     # 智谱 AI 配置
-    ZHIPU_API_KEY = os.getenv('ZHIPU_API_KEY', '3abf3efec6b745e6a2762da34c7f5a03.1xgrVFKLsa8Df398')
+    ZHIPU_API_KEY = os.getenv('ZHIPU_API_KEY', '92189810e7584172a80f9f85269143bc.pLudIoKZLSY8XoMc')
     
     @classmethod
     def get_db_config(cls):

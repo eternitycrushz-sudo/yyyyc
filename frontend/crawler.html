@@ -213,49 +213,6 @@
                 </div>
             </div>
 
-            <!-- Redis 去重缓存 -->
-            <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">storage</span>
-                        商品去重缓存 (Redis)
-                        <span class="text-xs font-normal text-text-secondary ml-2">解决重复爬取问题</span>
-                    </h3>
-                    <div class="flex gap-2">
-                        <button @click="checkRedisStatus" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm hover:border-primary flex items-center gap-1">
-                            <span class="material-symbols-outlined text-base">refresh</span>检查状态
-                        </button>
-                    </div>
-                </div>
-                <div v-if="redisStatus" class="mb-4 p-4 bg-input-bg rounded-lg">
-                    <div class="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <div class="text-text-secondary text-xs mb-1">连接状态</div>
-                            <div :class="redisStatus.redis_status === 'connected' ? 'text-green-400' : 'text-red-400'">
-                                {{ redisStatus.redis_status === 'connected' ? '已连接' : '未连接' }}
-                            </div>
-                        </div>
-                        <div>
-                            <div class="text-text-secondary text-xs mb-1">缓存项数</div>
-                            <div>{{ redisStatus.total_items || 0 }}</div>
-                        </div>
-                        <div>
-                            <div class="text-text-secondary text-xs mb-1">缓存 Key 数</div>
-                            <div>{{ redisStatus.total_keys || 0 }}</div>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-text-secondary text-sm mb-4">
-                    当爬虫重复爬取相同页码或商品时，Redis 会记住已爬取的商品以避免重复。
-                    <br/>如果需要重新爬取所有商品，请点击下方按钮清除缓存。
-                </p>
-                <button @click="clearRedisDedup" :disabled="clearingDedup"
-                        class="w-full py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg font-medium text-sm hover:bg-red-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
-                    <span v-if="clearingDedup" class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-                    <span>{{ clearingDedup ? '清除中...' : '清除所有去重缓存' }}</span>
-                </button>
-            </div>
-
             <!-- 代理配置 -->
             <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border mb-6">
                 <h3 class="text-lg font-semibold flex items-center gap-2 mb-4">
@@ -549,10 +506,6 @@ createApp({
         const cleaningTable = ref('')
         const detailModal = reactive({ visible: false, loading: false, task: null, details: [] })
 
-        // Redis 去重缓存
-        const redisStatus = ref(null)
-        const clearingDedup = ref(false)
-
         // 代理配置
         const proxyUrl = ref('')
         const proxyTesting = ref(false)
@@ -649,34 +602,6 @@ createApp({
         }
 
         // ===== Redis 去重缓存 =====
-        async function checkRedisStatus() {
-            const res = await apiFetch('/crawler/dedup/status')
-            if (res.success) {
-                redisStatus.value = res.data
-                window.Toast?.success('已更新缓存状态')
-            } else {
-                window.Toast?.error(res.message || '获取缓存状态失败')
-            }
-        }
-
-        async function clearRedisDedup() {
-            if (!confirm('确定要清除所有商品去重缓存吗？\n清除后重新爬取相同商品会再次处理。')) {
-                return
-            }
-            clearingDedup.value = true
-            const res = await apiFetch('/crawler/dedup/clear', {
-                method: 'POST',
-                body: JSON.stringify({})
-            })
-            clearingDedup.value = false
-            if (res.success) {
-                window.Toast?.success(res.message || '缓存已清除')
-                checkRedisStatus()
-            } else {
-                window.Toast?.error(res.message || '清除失败')
-            }
-        }
-
         // ===== 代理相关 =====
         async function loadProxy() {
             const res = await apiFetch('/crawler/proxy')
@@ -835,7 +760,6 @@ createApp({
             refreshCleanStatus()
             loadDbTaskLogs()
             loadProxy()
-            checkRedisStatus()
 
             // 每5秒自动刷新一次任务历史，保持最新状态
             setInterval(() => {
@@ -851,11 +775,9 @@ createApp({
             listForm, detailForm,
             listLoading, detailLoading, analysisLoading, batchDetailLoading, cleanLoading,
             taskHistory, cleanStatus, cleaningTable, detailModal,
-            redisStatus, clearingDedup,
             proxyUrl, proxyTesting, proxyStatus, proxyStatusOk,
             startListCrawler, startDetailCrawler, startAnalysis, startBatchDetail,
             refreshCleanStatus, cleanAllData, cleanSingleHandler, loadDbTaskLogs, showTaskDetail,
-            checkRedisStatus, clearRedisDedup,
             saveProxy, testProxy,
             handleLogout
         }

@@ -172,7 +172,8 @@ def predict_hot():
         where_clause = ""
         params = []
         if category:
-            where_clause = "WHERE category_name = %s"
+            # 从labels JSON字段中过滤分类
+            where_clause = "WHERE JSON_SEARCH(labels, 'one', %s) IS NOT NULL"
             params.append(category)
 
         cursor.execute(f"""
@@ -362,7 +363,8 @@ def get_wordcloud():
         where_clause = ""
         params = []
         if category:
-            where_clause = "WHERE category_name = %s"
+            # 从labels JSON字段中过滤分类
+            where_clause = "WHERE JSON_SEARCH(labels, 'one', %s) IS NOT NULL"
             params.append(category)
 
         if source == 'shops':

@@ -26,6 +26,10 @@ DetailWorker - 商品详情爬取 Worker
 import time
 import random
 from typing import Dict, Any, List, Optional
+import urllib3
+
+# 禁用 SSL 警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from crawler.workers.base import BaseWorker
 from crawler.workers import QUEUE_DETAIL, QUEUE_ANALYSIS
@@ -73,7 +77,7 @@ class DetailWorker(BaseWorker):
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': 'Dy@analysis2024',
+            'password': '123456',
             'database': 'dy_analysis_system'
         }
         
@@ -169,10 +173,24 @@ class DetailWorker(BaseWorker):
             query_params['sign'] = signer['url_sign']
             query_params['time'] = signer['timestamp']
             
-            # 发送请求
+            # 发送请求（禁用代理和SSL验证，解决连接问题）
             url = f"{ReduxSigner.BASE_URL}{self.SHOP_VIEW_PATH}"
-            response = requests.get(url, params=query_params, headers=headers)
-            result = response.json()
+            try:
+                session = requests.Session()
+                session.trust_env = False
+                # 明确禁用所有代理
+                session.proxies = {}
+                adapter = requests.adapters.HTTPAdapter(max_retries=0)
+                https_adapter = requests.adapters.HTTPAdapter(max_retries=0)
+                session.mount('http://', adapter)
+                session.mount('https://', https_adapter)
+                response = session.get(url, params=query_params, headers=headers, timeout=30, proxies={}, verify=False)
+                result = response.json()
+            except requests.exceptions.SSLError as e:
+                self.log.error(f"SSL 错误，尝试使用代理禁用方案: {e}")
+                # 最后的手段：直接使用 requests 而不是 session
+                response = requests.get(url, params=query_params, headers=headers, timeout=30, proxies={}, verify=False)
+                result = response.json()
             
             # 打印返回结果，方便调试
             self.log.debug(f"接口返回: {result}")
@@ -377,7 +395,7 @@ if __name__ == '__main__':
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': 'Dy@analysis2024',
+            'password': '123456',
             'database': 'dy_analysis_system'
         }
     )

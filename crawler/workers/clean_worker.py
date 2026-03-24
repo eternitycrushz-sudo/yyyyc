@@ -52,7 +52,7 @@ class CleanWorker:
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': 'Dy@analysis2024',
+            'password': '123456',
             'database': 'dy_analysis_system'
         }
         
@@ -217,7 +217,7 @@ if __name__ == '__main__':
         'host': 'localhost',
         'port': 3306,
         'user': 'root',
-        'password': 'Dy@analysis2024',
+        'password': '123456',
         'database': 'dy_analysis_system'
     }
     

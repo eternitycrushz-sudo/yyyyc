@@ -17,12 +17,8 @@ import pymysql
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
-from DBUtils.PooledDB import PooledDB
 
 from logger import get_logger
-
-# 全局连接池（类级别，所有实例共享）
-_db_pools = {}
 
 
 class BaseApiHandler(ABC):
@@ -72,54 +68,16 @@ class BaseApiHandler(ABC):
         from crawler.dy_xingtui.ReduxSiger import ReduxSigner
         self.signer = ReduxSigner
 
-        # 初始化连接池
-        self._db_pool = self._get_or_create_pool()
-
         # 确保表存在
         self._ensure_table()
 
-    def _get_or_create_pool(self):
-        """
-        获取或创建数据库连接池
-
-        使用全局连接池缓存，避免为每个 Handler 实例创建多个池
-        """
-        global _db_pools
-
-        # 使用数据库配置生成 key（排除密码避免泄露）
-        pool_key = f"{self.db_config['host']}:{self.db_config['port']}:{self.db_config['user']}:{self.db_config['db']}"
-
-        # 如果池不存在，创建新的
-        if pool_key not in _db_pools:
-            try:
-                pool = PooledDB(
-                    creator=pymysql,
-                    maxconnections=10,      # 最大连接数
-                    mincached=2,            # 最少缓存连接数
-                    maxcached=5,            # 最多缓存连接数
-                    blocking=True,          # 连接不足时阻塞等待
-                    ping=1,                 # 获取连接时检查是否可用
-                    charset='utf8mb4',
-                    cursorclass=pymysql.cursors.DictCursor,
-                    **self.db_config
-                )
-                _db_pools[pool_key] = pool
-                self.log.info(f"创建数据库连接池: {pool_key}")
-            except Exception as e:
-                self.log.error(f"创建连接池失败: {e}")
-                raise
-
-        return _db_pools[pool_key]
-    
     def _get_conn(self):
-        """
-        从连接池获取数据库连接
-
-        Returns:
-            从连接池中获取的数据库连接
-        """
-        conn = self._db_pool.connection()
-        return conn
+        """获取数据库连接"""
+        return pymysql.connect(
+            **self.db_config,
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
     
     def _ensure_table(self):
         """确保原始数据表存在"""

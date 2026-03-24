@@ -25,7 +25,10 @@ ListWorker - 商品列表爬取 Worker
 import time
 import random
 from typing import Dict, Any, List, Optional
-import redis
+import urllib3
+
+# 禁用 SSL 警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from crawler.workers.base import BaseWorker
 from crawler.workers import QUEUE_LIST, QUEUE_DETAIL
@@ -59,7 +62,7 @@ class ListWorker(BaseWorker):
         from crawler.token_manager import get_token
         return get_token()
     
-    def __init__(self, db_config: Dict = None, redis_config: Dict = None, **kwargs):
+    def __init__(self, db_config: Dict = None, **kwargs):
         """
         初始化 ListWorker
 
@@ -69,14 +72,8 @@ class ListWorker(BaseWorker):
                     'host': 'localhost',
                     'port': 3306,
                     'user': 'root',
-                    'password': 'Dy@analysis2024',
+                    'password': '123456',
                     'database': 'dy_analysis_system'
-                }
-            redis_config: Redis 配置，格式：
-                {
-                    'host': 'localhost',
-                    'port': 6379,
-                    'db': 0
                 }
             **kwargs: 传递给父类的参数（mq_host, mq_port）
         """
@@ -87,28 +84,9 @@ class ListWorker(BaseWorker):
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': 'Dy@analysis2024',
+            'password': '123456',
             'database': 'dy_analysis_system'
         }
-
-        # Redis 配置（用于全局去重）
-        redis_config = redis_config or {
-            'host': 'localhost',
-            'port': 6379,
-            'db': 0,
-            'decode_responses': True
-        }
-
-        try:
-            self.redis = redis.Redis(**redis_config)
-            self.redis.ping()  # 测试连接
-            self.log.info("Redis 连接成功")
-        except Exception as e:
-            self.log.warning(f"Redis 连接失败，将使用内存去重: {e}")
-            self.redis = None
-
-        # Redis key 前缀（按店铺 ID 组织，避免不同店铺的数据混淆）
-        self.redis_seen_key = "crawler:seen_products"
     
     # 多种搜索类型，获取不同类型的商品
     # search_type: 1=爆款推荐, 2=实时热销, 3=达人热推, 5=高佣好物, 8=潜力爆品, 11=综合推荐
@@ -128,8 +106,7 @@ class ListWorker(BaseWorker):
         原理：
         1. 从消息中获取页码范围
         2. 使用 6 种搜索类型逐页爬取，获取不同类型的商品
-        3. 使用 Redis 全局去重（支持多个 Worker 并发运行）
-        4. 如果 Redis 不可用，回退到内存去重
+        3. 按 product_id 去重后返回
 
         Args:
             message: 包含 start_page, end_page 的消息
@@ -142,9 +119,7 @@ class ListWorker(BaseWorker):
 
         self.log.info(f"开始爬取商品列表: 第{start_page}页 - 第{end_page}页, 共{len(self.SEARCH_TYPES)}种搜索类型")
 
-        # 使用 Redis 全局去重（如果连接成功）
-        use_redis = self.redis is not None
-        local_seen_ids = set()  # 本地去重（Redis 不可用时使用）
+        seen_ids = set()
         all_products = []
 
         for search_type, type_name in self.SEARCH_TYPES:
@@ -162,29 +137,10 @@ class ListWorker(BaseWorker):
                         new_count = 0
                         for p in products:
                             pid = p.get('product_id') or p.get('id')
-                            if not pid:
-                                continue
-
-                            # 检查去重：优先使用 Redis，回退到本地内存
-                            is_duplicate = False
-                            if use_redis:
-                                try:
-                                    # 使用 Redis SET 检查和添加
-                                    is_new = self.redis.sadd(self.redis_seen_key, str(pid))
-                                    is_duplicate = (is_new == 0)  # sadd 返回 1 表示新增，0 表示已存在
-                                except Exception as e:
-                                    self.log.warning(f"Redis 检查失败，回退到本地去重: {e}")
-                                    use_redis = False
-                                    is_duplicate = pid in local_seen_ids
-                            else:
-                                is_duplicate = pid in local_seen_ids
-
-                            if not is_duplicate:
-                                if not use_redis:
-                                    local_seen_ids.add(pid)
+                            if pid and pid not in seen_ids:
+                                seen_ids.add(pid)
                                 all_products.append(p)
                                 new_count += 1
-
                         self.log.info(f"[{type_name}] 第{page}页: {len(products)}条, 新增{new_count}条")
                         empty_count = 0
                     else:
@@ -197,7 +153,7 @@ class ListWorker(BaseWorker):
                     self.log.error(f"[{type_name}] 第{page}页爬取失败: {e}")
                     continue
 
-        self.log.info(f"商品列表爬取完成，共{len(all_products)}条不重复数据 (使用{'Redis' if use_redis else '内存'}去重)")
+        self.log.info(f"商品列表爬取完成，共{len(all_products)}条不重复数据")
         return all_products
     
     def _fetch_page(self, page: int, search_type: str = '11') -> Dict:
@@ -237,11 +193,24 @@ class ListWorker(BaseWorker):
         query_params['sign'] = signer['url_sign']
         query_params['time'] = signer['timestamp']
         
-        # 发送请求
+        # 发送请求（禁用代理和SSL验证，解决连接问题）
         url = f"{ReduxSigner.BASE_URL}{self.SHOP_SEARCH_PATH}"
-        response = requests.get(url, params=query_params, headers=headers)
-        
-        return response.json()
+        try:
+            session = requests.Session()
+            session.trust_env = False
+            # 明确禁用所有代理
+            session.proxies = {}
+            adapter = requests.adapters.HTTPAdapter(max_retries=0)
+            https_adapter = requests.adapters.HTTPAdapter(max_retries=0)
+            session.mount('http://', adapter)
+            session.mount('https://', https_adapter)
+            response = session.get(url, params=query_params, headers=headers, timeout=30, proxies={}, verify=False)
+            return response.json()
+        except requests.exceptions.SSLError as e:
+            self.log.error(f"SSL 错误，尝试使用代理禁用方案: {e}")
+            # 最后的手段：直接使用 requests 而不是 session
+            response = requests.get(url, params=query_params, headers=headers, timeout=30, proxies={}, verify=False)
+            return response.json()
     
     def clean(self, data: List[Dict]) -> List[Dict]:
         """
@@ -424,7 +393,7 @@ if __name__ == '__main__':
             'host': 'localhost',
             'port': 3306,
             'user': 'root',
-            'password': 'Dy@analysis2024',
+            'password': '123456',
             'database': 'dy_analysis_system'
         }
     )

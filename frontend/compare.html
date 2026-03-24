@@ -245,36 +245,85 @@ createApp({
         }
 
         function renderTrend() {
-            const chart = echarts.init(document.getElementById('trendChart'))
-            const goods = compareResult.value.goods
-            const colors = ['#13c8ec', '#f97316', '#a855f7', '#22c55e', '#ef4444', '#eab308']
-
-            // Collect all dates
-            const allDates = new Set()
-            goods.forEach(g => (g.trend || []).forEach(t => allDates.add(t.date)))
-            const dates = [...allDates].sort()
-
-            const series = goods.map((g, i) => {
-                const map = {}
-                ;(g.trend || []).forEach(t => map[t.date] = t.sales_count)
-                return {
-                    name: g.title?.substring(0, 10),
-                    type: 'line',
-                    smooth: true,
-                    data: dates.map(d => map[d] || 0),
-                    lineStyle: { color: colors[i] },
-                    itemStyle: { color: colors[i] }
+            try {
+                const trendChartEl = document.getElementById('trendChart')
+                if (!trendChartEl) {
+                    console.error('trendChart element not found')
+                    return
                 }
-            })
 
-            chart.setOption({
-                tooltip: { trigger: 'axis' },
-                legend: { bottom: 0, textStyle: { color: '#92c0c9' } },
-                grid: { left: 60, right: 20, top: 20, bottom: 60 },
-                xAxis: { type: 'category', data: dates, axisLabel: { color: '#92c0c9' }, axisLine: { lineStyle: { color: '#325e67' } } },
-                yAxis: { type: 'value', axisLabel: { color: '#92c0c9' }, splitLine: { lineStyle: { color: '#325e67' } } },
-                series
-            })
+                const chart = echarts.init(trendChartEl)
+                const goods = compareResult.value.goods
+                const colors = ['#13c8ec', '#f97316', '#a855f7', '#22c55e', '#ef4444', '#eab308']
+
+                // Debug: expose data to global scope
+                window.debugCompareData = {
+                    goodsCount: goods.length,
+                    goods: goods.map(g => ({
+                        title: g.title?.substring(0, 20),
+                        trendCount: g.trend?.length || 0,
+                        firstTrend: g.trend?.[0],
+                        lastTrend: g.trend?.[g.trend.length - 1]
+                    }))
+                }
+                console.log('DEBUG - Goods with trend data:', window.debugCompareData)
+
+                // Collect all dates
+                const allDates = new Set()
+                goods.forEach(g => {
+                    if (g.trend && Array.isArray(g.trend)) {
+                        g.trend.forEach(t => allDates.add(t.date))
+                    }
+                })
+                const dates = [...allDates].sort()
+                console.log('Trend dates:', dates.length, dates.slice(0, 3))
+
+                const series = goods.map((g, i) => {
+                    const map = {}
+                    let validCount = 0
+                    if (g.trend && Array.isArray(g.trend)) {
+                        g.trend.forEach(t => {
+                            if (t.date && typeof t.sales_count !== 'undefined') {
+                                map[t.date] = t.sales_count
+                                validCount++
+                            }
+                        })
+                    }
+                    const data = dates.map(d => {
+                        const val = map[d]
+                        return val !== undefined ? val : null
+                    })
+                    console.log(`Series ${i}: trend_records=${g.trend?.length || 0}, valid_pairs=${validCount}, data_points=${data.filter(x => x !== null).length}`)
+                    return {
+                        name: g.title?.substring(0, 10),
+                        type: 'line',
+                        smooth: true,
+                        data: data,
+                        lineStyle: { color: colors[i], width: 2 },
+                        itemStyle: { color: colors[i] },
+                        symbol: 'circle',
+                        symbolSize: 5,
+                        connectNulls: true
+                    }
+                })
+
+                if (dates.length === 0) {
+                    console.warn('No trend data found!')
+                }
+
+                chart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    legend: { bottom: 0, textStyle: { color: '#92c0c9' }, data: series.map(s => s.name) },
+                    grid: { left: 60, right: 20, top: 20, bottom: 60 },
+                    xAxis: { type: 'category', data: dates, axisLabel: { color: '#92c0c9' }, axisLine: { lineStyle: { color: '#325e67' } } },
+                    yAxis: { type: 'value', axisLabel: { color: '#92c0c9' }, splitLine: { lineStyle: { color: '#325e67' } } },
+                    series
+                })
+
+                console.log('Trend chart rendered successfully')
+            } catch (e) {
+                console.error('Error rendering trend chart:', e)
+            }
         }
 
         function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'login.html' }

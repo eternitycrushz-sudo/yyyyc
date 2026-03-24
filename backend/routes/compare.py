@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request
 from backend.models.base import get_db_connection
 from backend.utils.decorators import login_required
 import logging
+from backend.routes.goods_analysis import _ensure_product_has_data
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def compare_goods():
 
         placeholders = ','.join(['%s'] * len(product_ids))
         cursor.execute(f"""
-            SELECT product_id, title, cover, price, cos_fee, cos_ratio,
+            SELECT product_id, goods_id, title, cover, price, cos_fee, cos_ratio,
                    kol_cos_fee, kol_cos_ratio, kol_num, view_num, order_num,
                    sales, sales_7day, sales_24, shop_name, labels
             FROM goods_list
@@ -46,6 +47,10 @@ def compare_goods():
         """, product_ids)
 
         goods = cursor.fetchall()
+
+        # 确保所有商品都有分析数据（会自动生成缺失的数据）
+        for item in goods:
+            _ensure_product_has_data(cursor, conn, item['product_id'])
 
         # 获取趋势数据
         for item in goods:
@@ -58,6 +63,10 @@ def compare_goods():
                 if val is not None:
                     try:
                         val_str = str(val).replace('+', '').strip()
+                        # 处理范围值 "10w-25w" → 取前半部分
+                        if '-' in val_str and val_str[0].isdigit():
+                            val_str = val_str.split('-')[0]
+
                         if val_str.lower().endswith('w'):
                             item[key] = int(float(val_str[:-1]) * 10000)
                         else:
@@ -71,7 +80,7 @@ def compare_goods():
                 WHERE goods_id = %s
                 ORDER BY date ASC
                 LIMIT 30
-            """, (item['product_id'],))
+            """, (item['goods_id'],))
             item['trend'] = cursor.fetchall()
             for t in item['trend']:
                 if t.get('sales_amount'):
