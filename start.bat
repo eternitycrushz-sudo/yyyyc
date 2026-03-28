@@ -1,99 +1,127 @@
 @echo off
-chcp 65001 >nul
-title 抖音电商分析系统 - 启动器
+chcp 65001 >nul 2>nul
+setlocal enabledelayedexpansion
+title DY Analysis System - Launcher
 color 0B
 
 echo.
 echo  ==========================================
-echo     抖音电商热点数据可视化分析系统
-echo     一键启动脚本 (Flask + Workers)
+echo     DY E-commerce Analysis System
+echo     Start Script (RabbitMQ + Flask + Workers)
 echo  ==========================================
 echo.
 
-:: 切换到脚本所在目录
+:: Switch to script directory
 cd /d "%~dp0"
 
 :: ============================================
-:: [1] 检查虚拟环境
+:: [0] Clean up old processes
 :: ============================================
-echo [1/4] 检查 Python 虚拟环境...
+echo [0/5] Cleaning up old processes...
+for /f "tokens=2 delims=," %%a in ('tasklist /fi "WINDOWTITLE eq Flask*" /fo csv /nh 2^>nul ^| findstr /i "python"') do (
+    taskkill /f /pid %%~a >nul 2>&1
+)
+for /f "tokens=2 delims=," %%a in ('tasklist /fi "WINDOWTITLE eq Workers*" /fo csv /nh 2^>nul ^| findstr /i "python"') do (
+    taskkill /f /pid %%~a >nul 2>&1
+)
+echo       Done
+
+:: ============================================
+:: [1] Check virtual environment
+:: ============================================
+echo [1/5] Checking Python venv...
 if not exist ".env\Scripts\python.exe" (
     echo.
-    echo  [错误] 未找到虚拟环境 .env
-    echo  请先运行 setup_env.bat 初始化环境
+    echo  [ERROR] Virtual env .env not found
+    echo  Please run setup_env.bat first
     echo.
     pause
     exit /b 1
 )
-echo       √ 虚拟环境已就绪
+echo       OK
 
 :: ============================================
-:: [2] 检查 MySQL 连接
+:: [2] Check MySQL connection
 :: ============================================
-echo [2/4] 检查 MySQL 连接...
-.env\Scripts\python.exe -c "import pymysql; conn=pymysql.connect(host='localhost',port=3306,user='root',password='Dy@analysis2024',database='dy_analysis_system',connect_timeout=3); conn.close(); print('      √ MySQL 连接正常')" 2>nul
+echo [2/5] Checking MySQL...
+.env\Scripts\python.exe -c "import pymysql; conn=pymysql.connect(host='localhost',port=3306,user='root',password='123456',database='dy_analysis_system',connect_timeout=3); conn.close(); print('      OK')"
 if errorlevel 1 (
-    echo       [警告] MySQL 连接失败，请确认:
-    echo         - MySQL 服务已启动
-    echo         - 密码与 config.py 中的 DB_PASSWORD 一致
-    echo         - 数据库 dy_analysis_system 已创建
+    echo       [WARN] MySQL connection failed
+    echo         - Make sure MySQL is running
+    echo         - Check password in config.py
     echo.
-    set /p "CONTINUE=是否继续启动？(y/n): "
-    if /i not "%CONTINUE%"=="y" exit /b 1
+    set /p "CONTINUE=Continue anyway? (y/n): "
+    if /i not "!CONTINUE!"=="y" exit /b 1
 )
 
 :: ============================================
-:: [3] 检查 RabbitMQ 连接
+:: [3] Check and start RabbitMQ
 :: ============================================
-echo [3/4] 检查 RabbitMQ 连接...
-.env\Scripts\python.exe -c "import pika; conn=pika.BlockingConnection(pika.ConnectionParameters('localhost',5672,credentials=pika.PlainCredentials('guest','guest'),connection_attempts=1,retry_delay=0,socket_timeout=3)); conn.close(); print('      √ RabbitMQ 连接正常')" 2>nul
+echo [3/5] Checking RabbitMQ...
+sc query RabbitMQ >nul 2>&1
 if errorlevel 1 (
-    echo       [警告] RabbitMQ 连接失败，爬虫功能将不可用
-    echo         - 确认 RabbitMQ 服务已启动
-    echo         - 管理界面: http://localhost:15672
-    echo.
+    echo       [WARN] RabbitMQ service not installed
+    goto skip_rabbitmq
 )
 
+sc query RabbitMQ | findstr "RUNNING" >nul 2>&1
+if errorlevel 1 (
+    echo       RabbitMQ not running, starting...
+    net start RabbitMQ >nul 2>&1
+    if errorlevel 1 (
+        echo       [WARN] Failed to start RabbitMQ, try running as admin
+    ) else (
+        timeout /t 3 /nobreak >nul
+        echo       OK - RabbitMQ started
+    )
+) else (
+    echo       OK - RabbitMQ running
+)
+
+.env\Scripts\python.exe -c "import pika; conn=pika.BlockingConnection(pika.ConnectionParameters('localhost',5672,credentials=pika.PlainCredentials('guest','guest'),connection_attempts=2,retry_delay=1,socket_timeout=5)); conn.close(); print('      OK - Connection verified')"
+if errorlevel 1 (
+    echo       [WARN] RabbitMQ connection failed
+    echo         - Admin panel: http://localhost:15672
+)
+
+:skip_rabbitmq
+
 :: ============================================
-:: [4] 启动服务
+:: [4] Start Flask backend
 :: ============================================
-echo [4/4] 启动服务...
+echo [4/5] Starting Flask (port 5001)...
+start "Flask - Port 5001" cmd /k "cd /d %~dp0 && title Flask - Port 5001 && color 0A && .env\Scripts\python.exe backend\app.py"
+timeout /t 3 /nobreak >nul
+echo       OK
+
+:: ============================================
+:: [5] Start crawler Workers
+:: ============================================
+echo [5/5] Starting Workers...
+start "Workers - Crawler" cmd /k "cd /d %~dp0 && title Workers - Crawler && color 0E && .env\Scripts\python.exe -m crawler.workers.run_workers"
+timeout /t 2 /nobreak >nul
+echo       OK
+
+:: Open browser
 echo.
-
-:: 启动 Flask 后端
-echo       启动 Flask 后端 (端口 5001)...
-start "Flask 后端 - 端口 5001" cmd /k "cd /d %~dp0 && title Flask 后端 - 端口 5001 && color 0A && .env\Scripts\python.exe backend/app.py 2>&1 | tee logs/flask.log"
-
-:: 等待后端启动
-timeout /t 2 /nobreak >nul
-
-:: 启动爬虫 Workers
-echo       启动爬虫 Workers (7个进程)...
-start "爬虫 Workers" cmd /k "cd /d %~dp0 && title 爬虫 Workers && color 0E && .env\Scripts\python.exe -m crawler.workers.run_workers 2>&1 | tee logs/workers.log"
-
-:: 等待 Workers 启动
-timeout /t 2 /nobreak >nul
-
-:: 自动打开浏览器
-echo       打开浏览器...
+echo       Opening browser...
 start http://localhost:5001
 
 :: ============================================
-:: 启动完成
+:: Done
 :: ============================================
 echo.
 echo  ==========================================
-echo    所有服务已启动！
+echo    All services started!
 echo  ------------------------------------------
 echo.
-echo    Web 界面:  http://localhost:5001
+echo    Web UI:    http://localhost:5001
 echo    RabbitMQ:  http://localhost:15672
 echo.
-echo    默认账号:  admin
-echo    默认密码:  admin123
+echo    Account:   admin / admin123
 echo.
-echo    提示: 关闭此窗口不会停止服务
-echo    如需停止，请关闭 Flask 和 Workers 窗口
+echo    Tip: Closing this window won't stop services
+echo    To stop, close Flask and Workers windows
 echo  ==========================================
 echo.
 pause

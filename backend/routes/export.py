@@ -35,7 +35,7 @@ def _build_goods_query(args):
     # 分类过滤
     category = args.get('category', '')
     if category:
-        where_parts.append("category_name = %s")
+        where_parts.append("JSON_CONTAINS(labels, JSON_OBJECT('id', 'category', 'name', %s))")
         params.append(category)
 
     # 关键词搜索

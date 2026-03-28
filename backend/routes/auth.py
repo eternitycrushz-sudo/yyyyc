@@ -115,7 +115,7 @@ def register():
     username = data.get('username', '').strip()
     password = data.get('password', '')
     nickname = data.get('nickname', '')
-    role = data.get('role', 'viewer').lower()  # 默认为观察员
+    role = data.get('role', 'observer').lower()  # 默认为观察员
 
     if not username or not password:
         return jsonify({
@@ -130,10 +130,10 @@ def register():
         }), 400
 
     # 验证角色
-    if role not in ['viewer', 'operator']:
+    if role not in ['observer', 'operator']:
         return jsonify({
             'success': False,
-            'message': '无效的角色，只能选择 viewer 或 operator'
+            'message': '无效的角色，只能选择 observer 或 operator'
         }), 400
 
     # 检查用户名是否存在
@@ -152,10 +152,10 @@ def register():
         if selected_role:
             UserModel.assign_role(user_id, selected_role['id'])
         else:
-            # 如果找不到角色，默认分配 viewer
-            viewer_role = RoleModel.find_by_code('viewer')
-            if viewer_role:
-                UserModel.assign_role(user_id, viewer_role['id'])
+            # 如果找不到角色，默认分配 observer
+            observer_role = RoleModel.find_by_code('observer')
+            if observer_role:
+                UserModel.assign_role(user_id, observer_role['id'])
 
         return jsonify({
             'success': True,

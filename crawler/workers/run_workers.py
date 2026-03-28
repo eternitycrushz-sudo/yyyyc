@@ -39,6 +39,12 @@ import sys
 import os
 from typing import List
 
+# 全局禁用系统代理，防止代理软件(Clash/V2Ray等)干扰爬虫和RabbitMQ连接
+os.environ['NO_PROXY'] = '*'
+os.environ['no_proxy'] = '*'
+for _key in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']:
+    os.environ.pop(_key, None)
+
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 

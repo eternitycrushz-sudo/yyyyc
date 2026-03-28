@@ -151,6 +151,40 @@
         html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
         html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
         html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        /* 亮色模式 AI 消息气泡 */
+        html:not(.dark) .message-ai {
+            background: #f0f4f8 !important;
+            border-color: #d1d5db !important;
+            color: #1f2937 !important;
+        }
+        html:not(.dark) .markdown-content h1,
+        html:not(.dark) .markdown-content h2,
+        html:not(.dark) .markdown-content h3 { color: #111827 !important; }
+        html:not(.dark) .markdown-content code {
+            background: rgba(0,0,0,0.06) !important;
+            color: #0e7490 !important;
+        }
+        html:not(.dark) .markdown-content pre {
+            background: #f3f4f6 !important;
+        }
+        html:not(.dark) .markdown-content pre code {
+            color: #374151 !important;
+        }
+        html:not(.dark) .markdown-content th,
+        html:not(.dark) .markdown-content td {
+            border-color: #d1d5db !important;
+        }
+        html:not(.dark) .markdown-content th {
+            background: rgba(14, 116, 144, 0.08) !important;
+        }
+        html:not(.dark) ::-webkit-scrollbar-track { background: #f3f4f6 !important; }
+        html:not(.dark) ::-webkit-scrollbar-thumb { background: #9ca3af !important; }
+        /* 推荐问题区块 */
+        .suggestions-box { background-color: rgba(26, 48, 53, 0.6); }
+        html:not(.dark) .suggestions-box {
+            background-color: #f0f4f8 !important;
+            border-color: #d1d5db !important;
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
@@ -227,7 +261,7 @@
 
             <!-- 推荐问题区域 -->
             <div v-if="showSuggestions" class="flex justify-center">
-                <div class="w-full max-w-3xl bg-surface-dark/60 border border-input-border/60 rounded-2xl p-4">
+                <div class="w-full max-w-3xl suggestions-box border border-input-border/60 rounded-2xl p-4">
                     <div class="text-sm text-text-secondary mb-3">推荐问题</div>
                     <div class="flex flex-wrap gap-3">
                         <button v-for="(suggestion, idx) in suggestions" :key="idx"

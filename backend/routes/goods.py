@@ -24,17 +24,25 @@ FIRST_CID_CATEGORY_MAP = {
     '20090': '家居日用', '20093': '服饰鞋包', '20094': '家居日用',
     '20107': '家居日用', '20109': '美妆个护', '20113': '家居日用',
     '20120': '食品饮料', '38944': '食品饮料', '38946': '食品饮料',
+    # 补充缺失的分类映射
+    '20085': '美妆个护', '20007': '数码家电', '20012': '食品饮料',
+    '20074': '家居日用', '20044': '数码家电', '20009': '运动户外',
+    '20059': '家居日用', '20065': '数码家电', '20027': '服饰鞋包',
+    '20099': '美妆个护', '20000': '数码家电', '20083': '家居日用',
+    '20011': '服饰鞋包', '38945': '食品饮料', '20010': '服饰鞋包',
+    '20071': '家居日用', '20006': '服饰鞋包', '20032': '家居日用',
+    '20004': '家居日用', '20063': '家居日用',
 }
 
 # 默认分类（当 first_cid 无法匹配时，根据关键词推断）
 KEYWORD_CATEGORY_MAP = {
-    '食品饮料': ['零食', '饮料', '麦片', '燕麦', '食品', '饼干', '糖', '酱', '茶', '咖啡', '奶', '肉', '鱼', '虾', '果', '菜', '调料', '醋', '油', '面', '米', '粥', '汤', '膏', '蜂蜜', '坚果'],
+    '数码家电': ['手机', '电脑', '耳机', '充电', '数码', '家电', '风扇', '加湿', '电器', '油烟机', '灶', '净水', '净饮', '洗碗机', '冰箱', '空调', '洗衣机', '电视'],
+    '食品饮料': ['零食', '饮料', '麦片', '燕麦', '食品', '饼干', '糖果', '酱料', '茶叶', '咖啡', '牛奶', '酸奶', '肉', '鱼', '虾', '水果', '蔬菜', '调料', '食用油', '面条', '大米', '粥', '汤料', '蜂蜜', '坚果', '白酒', '红酒', '啤酒'],
     '家居日用': ['清洁', '洗衣', '垃圾袋', '收纳', '厨房', '家居', '毛巾', '纸巾', '牙刷', '拖把', '刷子', '贴', '灯', '花', '植物', '工具', '胶带'],
     '美妆个护': ['面膜', '口红', '眉笔', '洗面', '护肤', '化妆', '美妆', '香水', '防晒', '乳液', '精华', '卸妆', '皂', '维生素', '身体', '沐浴'],
     '服饰鞋包': ['裤', '衣', '鞋', '袜', '帽', '围巾', '手套', '包', '裙', '外套', '内衣', '睡衣'],
     '母婴用品': ['儿童', '宝宝', '婴', '奶瓶', '尿', '玩具', '童装', '孕'],
     '饰品配件': ['项链', '手链', '耳环', '戒指', '发夹', '发卡', '手表', '饰品', '配饰'],
-    '数码家电': ['手机', '电脑', '耳机', '充电', '数码', '家电', '风扇', '加湿', '电器'],
     '运动户外': ['运动', '健身', '瑜伽', '跑步', '户外', '露营', '钓鱼', '球'],
 }
 
@@ -109,14 +117,39 @@ def get_categories():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # 获取所有商品的labels字段（无LIMIT限制）
         cursor.execute("""
-            SELECT category_name, COUNT(*) as count
+            SELECT labels
             FROM goods_list
-            WHERE category_name IS NOT NULL AND category_name != ''
-            GROUP BY category_name
-            ORDER BY count DESC
+            WHERE labels IS NOT NULL AND JSON_CONTAINS(labels, JSON_OBJECT('id', 'category'))
         """)
-        categories = [{'name': row['category_name'], 'count': row['count']} for row in cursor.fetchall()]
+
+        # 手动解析并统计分类（确保不重复）
+        category_counts = {}
+        import json
+
+        for row in cursor.fetchall():
+            try:
+                if row['labels']:
+                    labels = json.loads(row['labels']) if isinstance(row['labels'], str) else row['labels']
+                    for label in labels:
+                        if isinstance(label, dict) and label.get('id') == 'category':
+                            cat_name = label.get('name')
+                            if cat_name:
+                                category_counts[cat_name] = category_counts.get(cat_name, 0) + 1
+                            break
+            except:
+                pass
+
+        # 按数量排序，去除重复
+        categories = [
+            {'name': name, 'count': count}
+            for name, count in sorted(set((name, category_counts[name]) for name in category_counts.keys()),
+                                     key=lambda x: x[1], reverse=True)
+        ]
+
+        cursor.close()
         conn.close()
         return jsonify({'code': 0, 'data': categories})
     except Exception as e:
@@ -162,13 +195,14 @@ def search_goods():
         cursor = conn.cursor()
         
         # 构建搜索条件
-        # 支持商品ID精确匹配或商品名称模糊匹配
+        # 支持商品ID、店铺ID精确匹配或商品名称模糊匹配
         where_clause = """
-            WHERE product_id = %s 
-            OR goods_id = %s 
+            WHERE product_id = %s
+            OR goods_id = %s
+            OR shop_id = %s
             OR title LIKE %s
         """
-        search_params = [query, query, f'%{query}%']
+        search_params = [query, query, query, f'%{query}%']
         
         # 查询总数
         count_query = f"SELECT COUNT(*) as total FROM goods_list {where_clause}"
@@ -314,7 +348,8 @@ def get_goods_list():
         query_params = []
 
         if category:
-            where_parts.append("category_name = %s")
+            # 使用JSON_CONTAINS从labels字段中过滤分类
+            where_parts.append("JSON_CONTAINS(labels, JSON_OBJECT('id', 'category', 'name', %s))")
             query_params.append(category)
 
         if start_date:

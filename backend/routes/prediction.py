@@ -27,6 +27,29 @@ logger = logging.getLogger(__name__)
 prediction_bp = Blueprint('prediction', __name__)
 
 # ============================================================
+# 分类映射（与爬虫同步）
+# ============================================================
+CATEGORY_MAP = {
+    '20115': '家居日用', '20018': '食品饮料', '20104': '食品饮料',
+    '20040': '家居日用', '20068': '母婴用品', '20056': '美妆个护',
+    '20073': '家居日用', '20005': '服饰鞋包', '20015': '家居日用',
+    '20017': '食品饮料', '20035': '家居日用', '20048': '家居日用',
+    '20080': '饰品配件', '20070': '家居日用', '20076': '家居日用',
+    '20013': '家居日用', '20029': '美妆个护', '20062': '服饰鞋包',
+    '20066': '美妆个护', '20069': '家居日用', '20072': '家居日用',
+    '20090': '家居日用', '20093': '服饰鞋包', '20094': '家居日用',
+    '20107': '家居日用', '20109': '美妆个护', '20113': '家居日用',
+    '20120': '食品饮料', '38944': '食品饮料', '38946': '食品饮料',
+}
+
+def _build_category_case():
+    """生成SQL CASE语句用于first_cid分类映射"""
+    cases = []
+    for cid, cat in CATEGORY_MAP.items():
+        cases.append(f"WHEN first_cid = '{cid}' THEN '{cat}'")
+    return "CASE " + " ".join(cases) + " ELSE '家居日用' END"
+
+# ============================================================
 # 中文分词工具（优先 jieba，降级到正则分词）
 # ============================================================
 
@@ -168,13 +191,17 @@ def predict_hot():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 获取商品数据
+        # 获取商品数据（支持JSON labels和first_cid映射两种方式）
         where_clause = ""
         params = []
         if category:
-            # 从labels JSON字段中过滤分类
-            where_clause = "WHERE JSON_SEARCH(labels, 'one', %s) IS NOT NULL"
-            params.append(category)
+            # 同时支持 labels JSON 和 first_cid 映射
+            category_case = _build_category_case()
+            where_clause = f"""WHERE (
+                JSON_CONTAINS(labels, JSON_OBJECT('id', 'category', 'name', %s))
+                OR {category_case} = %s
+            )"""
+            params.extend([category, category])
 
         cursor.execute(f"""
             SELECT product_id, title, cover, price, coupon_price,
@@ -363,9 +390,13 @@ def get_wordcloud():
         where_clause = ""
         params = []
         if category:
-            # 从labels JSON字段中过滤分类
-            where_clause = "WHERE JSON_SEARCH(labels, 'one', %s) IS NOT NULL"
-            params.append(category)
+            # 同时支持 labels JSON 和 first_cid 映射
+            category_case = _build_category_case()
+            where_clause = f"""WHERE (
+                JSON_CONTAINS(labels, JSON_OBJECT('id', 'category', 'name', %s))
+                OR {category_case} = %s
+            )"""
+            params.extend([category, category])
 
         if source == 'shops':
             cursor.execute(f"""

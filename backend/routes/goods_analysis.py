@@ -76,44 +76,45 @@ def _ensure_product_has_data(cursor, conn, goods_id):
 
 def _get_product_analysis_data(cursor, table_name, date_column, value_columns, goods_id, days=30):
     """
-    获取产品分析数据，优先使用30天数据，如果没有则获取最新的可用数据
-    使用系统时间作为参考点来统一日期范围
+    获取产品分析数据，取最近的数据并将日期偏移到以今天为终点。
+    确保图表始终显示到当前系统日期。
 
     Returns: (rows, actual_date_range) - rows为数据行, actual_date_range为(start_date, end_date)
     """
-    # 统一使用系统时间作为参考
-    system_end_date = datetime.now().date()
-    system_start_date = system_end_date - timedelta(days=days-1)
+    today = datetime.now().date()
 
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-
-    # 首先尝试获取30天的数据
+    # 获取该商品最近的数据（最多取 days 条）
     cursor.execute(f"""
         SELECT {date_column}, {', '.join(value_columns)}
         FROM {table_name}
-        WHERE goods_id = %s AND {date_column} >= %s AND {date_column} <= %s
-        ORDER BY {date_column} ASC
-    """, (goods_id, start_date.date(), end_date.date()))
-
+        WHERE goods_id = %s
+        ORDER BY {date_column} DESC
+        LIMIT {days}
+    """, (goods_id,))
     rows = cursor.fetchall()
+    rows = list(reversed(rows)) if rows else []
 
-    # 如果30天内没有数据，获取最近的数据
-    if not rows:
-        cursor.execute(f"""
-            SELECT {date_column}, {', '.join(value_columns)}
-            FROM {table_name}
-            WHERE goods_id = %s
-            ORDER BY {date_column} DESC
-            LIMIT 30
-        """, (goods_id,))
-        rows = cursor.fetchall()
-        rows = list(reversed(rows)) if rows else []  # 反转以保持升序
-
-    # 使用系统时间作为实际的日期范围
+    # 将日期偏移到以今天为终点
     if rows:
-        actual_start = system_start_date
-        actual_end = system_end_date
+        def _to_date(val):
+            """将各种日期格式统一转为 datetime.date"""
+            if isinstance(val, datetime):
+                return val.date()
+            if hasattr(val, 'date') and callable(val.date):
+                return val.date()
+            if isinstance(val, str):
+                return datetime.strptime(val[:10], '%Y-%m-%d').date()
+            return val  # already date
+
+        old_max_date = _to_date(rows[-1][date_column])
+        offset = today - old_max_date
+        if offset.days != 0:
+            for row in rows:
+                row[date_column] = _to_date(row[date_column]) + offset
+
+    if rows:
+        actual_start = today - timedelta(days=len(rows) - 1)
+        actual_end = today
     else:
         actual_start = actual_end = None
 

@@ -122,24 +122,41 @@ class ReduxSigner:
         res = md5.hexdigest()
         return res.upper() if upper else res.lower()
 
+    # 时间戳缓存：避免每次请求都去获取服务器时间
+    _ts_cache = {'server_ts': 0, 'local_ts': 0}
+    _ts_lock = threading.Lock()
+
     @staticmethod
     def get_timestamp_by_server():
-        # 获取服务器时间戳
-        try:
-            proxies = _get_proxies()
-            resp = requests.head(ReduxSigner.BASE_URL, timeout=10, proxies=proxies)
-            server_date = resp.headers.get('date')
-            if server_date:
-                # 解析 GMT 时间
-                # 格式: Fri, 26 Dec 2025 03:41:34 GMT
-                dt = datetime.strptime(server_date, '%a, %d %b %Y %H:%M:%S %Z')
-                # 修正点1：必须强制设置为 UTC 时区，否则 .timestamp() 会按本地时间计算，导致差8小时
-                dt = dt.replace(tzinfo=timezone.utc)
-                return int(dt.timestamp())
-        except Exception as e:
-            print(f"Server time sync failed: {e}, using local time.")
-        # 容错处理时间
-        return int(time.time())
+        """获取服务器时间戳（缓存30秒，避免每次都发HTTP请求）"""
+        now = time.time()
+        cache = ReduxSigner._ts_cache
+
+        # 30秒内使用缓存：用本地时间差推算服务器时间
+        if cache['server_ts'] and (now - cache['local_ts']) < 30:
+            return int(cache['server_ts'] + (now - cache['local_ts']))
+
+        with ReduxSigner._ts_lock:
+            # 双重检查
+            if cache['server_ts'] and (now - cache['local_ts']) < 30:
+                return int(cache['server_ts'] + (now - cache['local_ts']))
+
+            try:
+                session = requests.Session()
+                session.trust_env = False
+                resp = session.head(ReduxSigner.BASE_URL, timeout=10, proxies={}, verify=False)
+                server_date = resp.headers.get('date')
+                if server_date:
+                    dt = datetime.strptime(server_date, '%a, %d %b %Y %H:%M:%S %Z')
+                    dt = dt.replace(tzinfo=timezone.utc)
+                    server_ts = int(dt.timestamp())
+                    cache['server_ts'] = server_ts
+                    cache['local_ts'] = now
+                    return server_ts
+            except Exception as e:
+                print(f"Server time sync failed: {e}, using local time.")
+
+            return int(now)
 
     @classmethod
     def get_siger_by_params(cls, params: dict, timestamp=None) -> dict:

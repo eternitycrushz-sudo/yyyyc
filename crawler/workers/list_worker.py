@@ -87,6 +87,12 @@ class ListWorker(BaseWorker):
             'password': '123456',
             'database': 'dy_analysis_system'
         }
+
+        # 复用 HTTP Session，避免每次请求都创建新连接
+        self._session = requests.Session()
+        self._session.trust_env = False
+        self._session.proxies = {}
+        self._session.verify = False
     
     # 多种搜索类型，获取不同类型的商品
     # search_type: 1=爆款推荐, 2=实时热销, 3=达人热推, 5=高佣好物, 8=潜力爆品, 11=综合推荐
@@ -193,24 +199,10 @@ class ListWorker(BaseWorker):
         query_params['sign'] = signer['url_sign']
         query_params['time'] = signer['timestamp']
         
-        # 发送请求（禁用代理和SSL验证，解决连接问题）
+        # 发送请求（复用 session，禁用代理和SSL验证）
         url = f"{ReduxSigner.BASE_URL}{self.SHOP_SEARCH_PATH}"
-        try:
-            session = requests.Session()
-            session.trust_env = False
-            # 明确禁用所有代理
-            session.proxies = {}
-            adapter = requests.adapters.HTTPAdapter(max_retries=0)
-            https_adapter = requests.adapters.HTTPAdapter(max_retries=0)
-            session.mount('http://', adapter)
-            session.mount('https://', https_adapter)
-            response = session.get(url, params=query_params, headers=headers, timeout=30, proxies={}, verify=False)
-            return response.json()
-        except requests.exceptions.SSLError as e:
-            self.log.error(f"SSL 错误，尝试使用代理禁用方案: {e}")
-            # 最后的手段：直接使用 requests 而不是 session
-            response = requests.get(url, params=query_params, headers=headers, timeout=30, proxies={}, verify=False)
-            return response.json()
+        response = self._session.get(url, params=query_params, headers=headers, timeout=15)
+        return response.json()
     
     def clean(self, data: List[Dict]) -> List[Dict]:
         """

@@ -6,6 +6,7 @@
 from flask import Blueprint, jsonify, request, g
 from backend.models.base import get_db_connection
 from backend.utils.decorators import login_required, permission_required
+from backend.routes.oplog import log_operation
 import hashlib
 import logging
 
@@ -169,11 +170,20 @@ def delete_user(user_id):
 
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # 先查询被删除用户的用户名
+        cursor.execute("SELECT username FROM sys_user WHERE id = %s", (user_id,))
+        target_user = cursor.fetchone()
+        target_username = target_user['username'] if target_user else f'ID:{user_id}'
+
         cursor.execute("DELETE FROM sys_user_role WHERE user_id = %s", (user_id,))
         cursor.execute("DELETE FROM sys_user WHERE id = %s", (user_id,))
         conn.commit()
         cursor.close()
         conn.close()
+
+        # 记录操作日志
+        log_operation('删除用户', '用户管理', f"删除用户 {target_username} (ID:{user_id})")
 
         return jsonify({'code': 0, 'msg': '删除成功'})
     except Exception as e:

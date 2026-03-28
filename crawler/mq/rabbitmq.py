@@ -53,10 +53,10 @@ class RabbitMQClient:
             port=port,
             virtual_host=virtual_host,
             credentials=self.credentials,
-            # 心跳检测，防止长时间无操作断开
-            heartbeat=600,
+            # 心跳检测，设为0禁用心跳（任务处理可能耗时30分钟+，心跳会导致连接断开）
+            heartbeat=0,
             # 连接超时
-            blocked_connection_timeout=300
+            blocked_connection_timeout=600
         )
         self._connection = None
         self._channel = None
