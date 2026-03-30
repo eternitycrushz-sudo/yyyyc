@@ -11,6 +11,7 @@ import io
 import json
 import logging
 from datetime import datetime
+from crawler.workers.cleaners.utils import parse_range, parse_number
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,28 @@ def _build_goods_query(args):
 
     where_clause = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
 
-    return where_clause, params
+    # 排序
+    allowed_sort = {'created_at', 'price', 'cos_fee', 'view_num'}
+    sort_by = args.get('sort_by', 'created_at')
+    if sort_by not in allowed_sort:
+        sort_by = 'created_at'
+    order = 'ASC' if args.get('order', 'desc').upper() == 'ASC' else 'DESC'
+    order_clause = f" ORDER BY {sort_by} {order}"
+
+    return where_clause, params, order_clause
+
+
+def _clean_range_value(value):
+    """将范围字符串（如 '750-1000'、'2.5w-5w'）转为中间值，无法解析返回原值"""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    min_val, max_val = parse_range(value)
+    if min_val is not None and max_val is not None:
+        return (min_val + max_val) / 2
+    num = parse_number(value)
+    return num if num is not None else value
 
 
 @export_bp.route('/goods/csv', methods=['GET'])
@@ -65,7 +87,7 @@ def export_goods_csv():
     """
     try:
         limit = min(int(request.args.get('limit', 1000)), 10000)
-        where_clause, params = _build_goods_query(request.args)
+        where_clause, params, order_clause = _build_goods_query(request.args)
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -76,7 +98,7 @@ def export_goods_csv():
                kol_num, platform, created_at, updated_at
         FROM goods_list
         {where_clause}
-        ORDER BY created_at DESC
+        {order_clause}
         LIMIT %s
         """
         params.append(limit)
@@ -95,16 +117,20 @@ def export_goods_csv():
                     '达人数', '平台', '创建时间', '更新时间']
         writer.writerow(headers)
 
-        # 数据行
+        # 数据行（对范围字符串字段做数据清洗，转为数值中间值）
+        range_fields = ('order_num', 'sales', 'sales_24', 'sales_7day', 'kol_num')
         for row in rows:
             writer.writerow([
                 row['product_id'], row['title'],
                 row['price'], row['coupon_price'],
                 row['cos_fee'], row['cos_ratio'],
                 row['shop_name'], row['view_num'],
-                row['order_num'], row['sales'],
-                row['sales_24'], row['sales_7day'],
-                row['kol_num'], row['platform'],
+                _clean_range_value(row['order_num']),
+                _clean_range_value(row['sales']),
+                _clean_range_value(row['sales_24']),
+                _clean_range_value(row['sales_7day']),
+                _clean_range_value(row['kol_num']),
+                row['platform'],
                 str(row['created_at']), str(row['updated_at'])
             ])
 
@@ -140,7 +166,7 @@ def export_goods_json():
     """
     try:
         limit = min(int(request.args.get('limit', 1000)), 10000)
-        where_clause, params = _build_goods_query(request.args)
+        where_clause, params, order_clause = _build_goods_query(request.args)
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -151,7 +177,7 @@ def export_goods_json():
                kol_num, platform, created_at, updated_at
         FROM goods_list
         {where_clause}
-        ORDER BY created_at DESC
+        {order_clause}
         LIMIT %s
         """
         params.append(limit)
@@ -160,7 +186,7 @@ def export_goods_json():
         cursor.close()
         conn.close()
 
-        # 序列化日期字段
+        # 序列化日期字段，并对范围字符串字段做数据清洗
         for row in rows:
             for key in ['created_at', 'updated_at']:
                 if row[key]:
@@ -168,6 +194,8 @@ def export_goods_json():
             for key in ['price', 'coupon_price', 'cos_fee', 'cos_ratio']:
                 if row[key] is not None:
                     row[key] = float(row[key])
+            for key in ['order_num', 'sales', 'sales_24', 'sales_7day', 'kol_num']:
+                row[key] = _clean_range_value(row[key])
 
         filename = f"goods_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         json_data = json.dumps(rows, ensure_ascii=False, indent=2)

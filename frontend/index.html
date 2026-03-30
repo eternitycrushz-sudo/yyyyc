@@ -1116,6 +1116,7 @@ createApp({
             if (filterEndDate.value) url += `&end_date=${filterEndDate.value}`
             if (selectedCategory.value) url += `&category=${encodeURIComponent(selectedCategory.value)}`
             if (isSearchMode.value && searchQuery.value.trim()) url += `&keyword=${encodeURIComponent(searchQuery.value.trim())}`
+            url += `&sort_by=${goodsSort.value}&order=desc`
 
             // 使用 fetch 下载（带 token）
             const token = getToken()

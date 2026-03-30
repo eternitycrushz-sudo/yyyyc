@@ -288,6 +288,63 @@ def _save_task_log(task_id, task_type, params, status='sent', result=''):
         logging.getLogger(__name__).error(f"保存任务日志失败: {e}")
 
 
+@mq_bp.route('/retry_task/<task_id>', methods=['POST'])
+@login_required
+@permission_required('crawler:start')
+def retry_task(task_id):
+    """重新发送卡住的任务（将 sent/failed/dead_letter 状态的任务重新入队）"""
+    try:
+        from backend.models.base import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM crawler_task_log WHERE task_id = %s", (task_id,))
+        task_log = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not task_log:
+            return jsonify({'success': False, 'message': '任务不存在'}), 404
+
+        task_type = task_log.get('task_type', '')
+        params_str = task_log.get('params', '{}')
+        try:
+            params = json.loads(params_str)
+        except Exception:
+            params = {}
+
+        # 根据任务类型选择队列
+        from crawler.workers import QUEUE_LIST, QUEUE_DETAIL, QUEUE_ANALYSIS
+        queue_map = {
+            'list': QUEUE_LIST,
+            'list_crawler': QUEUE_LIST,
+            'detail': QUEUE_DETAIL,
+            'analysis': QUEUE_ANALYSIS,
+            'batch_detail': QUEUE_DETAIL,
+        }
+        queue = queue_map.get(task_type)
+        if not queue:
+            return jsonify({'success': False, 'message': f'不支持重试的任务类型: {task_type}'}), 400
+
+        # 重置状态为 sent 并重新发送
+        conn2 = get_db_connection()
+        with conn2.cursor() as c2:
+            c2.execute(
+                "UPDATE crawler_task_log SET status='sent', result='' WHERE task_id=%s",
+                (task_id,)
+            )
+        conn2.commit()
+        conn2.close()
+
+        mq = RabbitMQClient(**Config.get_mq_config())
+        mq.publish(queue, params)
+        mq.close()
+
+        log_operation('重试任务', '爬虫', f'task_id={task_id}')
+        return jsonify({'success': True, 'message': '任务已重新发送'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'重试失败: {str(e)}'}), 500
+
+
 @mq_bp.route('/task_logs', methods=['GET'])
 @login_required
 @permission_required('crawler:view')

@@ -388,14 +388,19 @@ createApp({
                 return
             }
             try {
+                const changed = {}
+                if (profileEditForm.username.trim() !== (profileInfo.value.username || '')) changed.username = profileEditForm.username.trim()
+                if (profileEditForm.nickname !== (profileInfo.value.nickname || '')) changed.nickname = profileEditForm.nickname
+                if (profileEditForm.email !== (profileInfo.value.email || '')) changed.email = profileEditForm.email
+                if (profileEditForm.phone !== (profileInfo.value.phone || '')) changed.phone = profileEditForm.phone
+                if (Object.keys(changed).length === 0) {
+                    window.Toast?.info('没有任何修改')
+                    profileEditMode.value = false
+                    return
+                }
                 const res = await apiFetch('/settings/profile', {
                     method: 'PUT',
-                    body: JSON.stringify({
-                        username: profileEditForm.username.trim(),
-                        nickname: profileEditForm.nickname,
-                        email: profileEditForm.email,
-                        phone: profileEditForm.phone
-                    })
+                    body: JSON.stringify(changed)
                 })
                 if (res && res.code === 0) {
                     window.Toast?.success('个人信息已更新')

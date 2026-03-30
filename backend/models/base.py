@@ -146,6 +146,25 @@ def init_tables():
             INDEX `idx_created_at` (`created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI会话消息表';
         """,
+
+        # 爬虫任务日志表（发送记录 + 执行状态）
+        """
+        CREATE TABLE IF NOT EXISTS `crawler_task_log` (
+            `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+            `task_id` VARCHAR(64) NOT NULL UNIQUE COMMENT '任务ID',
+            `task_type` VARCHAR(50) COMMENT '任务类型: list/detail/analysis',
+            `params` TEXT COMMENT '任务参数(JSON)',
+            `user_id` INT COMMENT '发起人ID',
+            `username` VARCHAR(50) COMMENT '发起人用户名',
+            `status` VARCHAR(20) DEFAULT 'sent' COMMENT '状态: sent/running/completed/failed/dead_letter',
+            `result` VARCHAR(500) DEFAULT '' COMMENT '执行结果摘要',
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_task_id` (`task_id`),
+            INDEX `idx_status` (`status`),
+            INDEX `idx_created_at` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='爬虫任务日志表';
+        """,
     ]
     
     conn = get_db_connection()

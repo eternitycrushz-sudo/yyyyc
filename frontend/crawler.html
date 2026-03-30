@@ -368,8 +368,11 @@
                                     <span v-else class="px-2 py-0.5 rounded text-xs bg-gray-500/20 text-text-secondary">待消费</span>
                                     <div v-if="task.result" class="text-xs text-text-secondary mt-1 truncate max-w-[150px]" :title="task.result">{{ task.result }}</div>
                                 </td>
-                                <td class="py-3 px-4">
+                                <td class="py-3 px-4 flex items-center gap-2">
                                     <button @click="showTaskDetail(task.id)" class="text-xs text-primary hover:underline">详情</button>
+                                    <button v-if="task.execStatus === 'pending' || task.execStatus === 'failed' || task.execStatus === 'dead_letter'"
+                                            @click="retryTask(task.id)"
+                                            class="text-xs text-yellow-400 hover:underline">重试</button>
                                 </td>
                             </tr>
                             <tr v-if="taskHistory.length === 0">
@@ -719,6 +722,21 @@ createApp({
                     }
                 })
                 taskHistory.value = dbTasks
+            }
+        }
+
+        async function retryTask(taskId) {
+            if (!confirm('确认重新发送此任务？')) return
+            try {
+                const res = await apiFetch(`/mq/retry_task/${taskId}`, { method: 'POST' })
+                if (res.success) {
+                    alert('任务已重新发送，请稍后刷新查看状态')
+                    await loadDbTaskLogs()
+                } else {
+                    alert('重试失败: ' + res.message)
+                }
+            } catch(e) {
+                alert('请求失败: ' + e.message)
             }
         }
 

@@ -78,6 +78,7 @@ class BaseWorker(ABC):
         """回写任务状态到 crawler_task_log 表（状态只能前进不能回退）"""
         if not task_id or not hasattr(self, 'db_config'):
             return
+        conn = None
         try:
             conn = pymysql.connect(**self.db_config, charset='utf8mb4')
             with conn.cursor() as cursor:
@@ -94,9 +95,11 @@ class BaseWorker(ABC):
                         (status, result[:500] if result else '', task_id)
                     )
             conn.commit()
-            conn.close()
         except Exception as e:
-            self.log.debug(f"更新 task_log 状态失败(可忽略): {e}")
+            self.log.warning(f"更新 task_log 状态失败: task_id={task_id}, status={status}, error={e}")
+        finally:
+            if conn:
+                conn.close()
 
     def _send_to_dead_letter_queue(self, task_id: str, message: Dict, error: str):
         """

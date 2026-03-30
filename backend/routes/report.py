@@ -84,7 +84,7 @@ def generate_report():
         cursor.execute(f"""
             SELECT shop_name, COUNT(*) as cnt, ROUND(AVG(price),2) as avg_p
             FROM goods_list {where_clause + ' AND ' if where_clause else ' WHERE '} shop_name IS NOT NULL AND shop_name != ''
-            GROUP BY shop_name ORDER BY cnt DESC LIMIT 5
+            GROUP BY shop_name ORDER BY cnt DESC LIMIT 10
         """, params)
         top_shops = cursor.fetchall()
         for s in top_shops:

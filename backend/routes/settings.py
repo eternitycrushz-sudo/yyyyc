@@ -314,6 +314,7 @@ def update_profile():
 
         updates = []
         params = []
+        log_parts = []  # 用于记录操作日志的字段=值
 
         # 如果修改用户名，检查是否已存在
         if username is not None and username.strip():
@@ -324,19 +325,24 @@ def update_profile():
                 return jsonify({'code': -1, 'msg': '用户名已存在'}), 400
             updates.append("username = %s")
             params.append(username.strip())
+            log_parts.append(f"username={username.strip()}")
 
         if nickname is not None:
             updates.append("nickname = %s")
             params.append(nickname)
+            log_parts.append(f"nickname={nickname}")
         if email is not None:
             updates.append("email = %s")
             params.append(email)
+            log_parts.append(f"email={email}")
         if phone is not None:
             updates.append("phone = %s")
             params.append(phone)
+            log_parts.append(f"phone={phone}")
         if avatar is not None:
             updates.append("avatar = %s")
             params.append(avatar)
+            log_parts.append("avatar=<已更新>")
 
         if updates:
             params.append(user_id)
@@ -348,7 +354,7 @@ def update_profile():
                 INSERT INTO sys_operation_log (user_id, username, action, module, detail, ip, status)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (user_id, g.current_user['username'], '修改个人信息', 'profile',
-                  f"修改了: {', '.join(updates)}", request.remote_addr, 1))
+                  f"修改了: {', '.join(log_parts)}", request.remote_addr, 1))
 
             conn.commit()
 

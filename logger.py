@@ -10,6 +10,27 @@ import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from datetime import datetime
 
+
+class WinSafeRotatingFileHandler(RotatingFileHandler):
+    """Windows 多进程安全的日志轮转处理器。
+
+    Windows 不允许重命名被其他进程占用的文件，多个 Worker 进程同时
+    轮转日志时会抛出 PermissionError [WinError 32]。
+    此类在轮转失败时静默跳过，待下次触发时再尝试。
+    """
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except PermissionError:
+            pass  # 另一进程正在占用，跳过本次轮转
+
+    def emit(self, record):
+        try:
+            super().emit(record)
+        except PermissionError:
+            pass  # 写入冲突时静默跳过
+
 # Windows 控制台颜色支持
 if sys.platform == 'win32':
     os.system('')  # 启用 ANSI 转义码支持
@@ -146,7 +167,7 @@ class LoggerManager:
             log_file = f"{name}.log"
         
         log_path = os.path.join(cls._log_dir, log_file)
-        file_handler = RotatingFileHandler(
+        file_handler = WinSafeRotatingFileHandler(
             log_path,
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5,
@@ -158,7 +179,7 @@ class LoggerManager:
         
         # 错误日志单独记录
         error_log_path = os.path.join(cls._log_dir, f"{name}_error.log")
-        error_handler = RotatingFileHandler(
+        error_handler = WinSafeRotatingFileHandler(
             error_log_path,
             maxBytes=10 * 1024 * 1024,
             backupCount=3,
