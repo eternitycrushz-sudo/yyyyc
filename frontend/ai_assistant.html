@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8"/>
@@ -50,140 +50,547 @@
         }
         
         body {
-            font-family: Inter, "Noto Sans SC", sans-serif;
+            font-family: 'Outfit', 'Inter', "Noto Sans SC", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(19, 200, 236, 0.08), transparent 26%),
+                radial-gradient(circle at top right, rgba(17, 94, 89, 0.12), transparent 22%),
+                #0a1113;
+        }
+
+        #app {
+            padding: 12px;
+            gap: 12px;
         }
         
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #111f22; }
-        ::-webkit-scrollbar-thumb { background: #325e67; border-radius: 4px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(50, 94, 103, 0.5); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #13c8ec; }
         
+        /* 玻璃拟态基础 */
+        .glass-panel {
+            background: rgba(22, 40, 43, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(19, 200, 236, 0.15);
+            border-radius: 28px;
+            overflow: hidden;
+        }
+
         .message-user { 
             background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%); 
+            box-shadow: 0 4px 15px rgba(19, 200, 236, 0.3);
+            color: #0c1a1d;
+            font-weight: 500;
+            width: fit-content;
+            max-width: min(100%, 34rem);
+            margin-left: auto;
         }
+
         .message-ai { 
-            background: #1a3035; 
-            border: 1px solid #325e67; 
+            background: rgba(26, 48, 53, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(19, 200, 236, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: fit-content;
+            max-width: min(100%, 46rem) !important;
+        }
+
+        .message-ai--detail {
+            width: min(100%, 54rem);
+            max-width: min(100%, 54rem) !important;
+            background:
+                linear-gradient(180deg, rgba(26, 48, 53, 0.98), rgba(16, 31, 34, 0.98)),
+                rgba(26, 48, 53, 0.92);
+            border-color: rgba(19, 200, 236, 0.18);
+            box-shadow:
+                0 18px 44px rgba(0, 0, 0, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .main-shell {
+            background:
+                linear-gradient(180deg, rgba(18, 34, 38, 0.95), rgba(10, 17, 19, 0.98)),
+                #0a1113;
+            border: 1px solid rgba(19, 200, 236, 0.12);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+        }
+
+        .thread-wrap {
+            max-width: 880px;
+            margin: 0 auto;
+            width: 100%;
         }
         
-        /* Markdown 样式 */
-        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
-            font-weight: bold;
-            margin-top: 1em;
-            margin-bottom: 0.5em;
-            color: #fff;
+        .bubble-inner {
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.1));
         }
-        .markdown-content h1 { font-size: 1.5em; }
-        .markdown-content h2 { font-size: 1.3em; }
-        .markdown-content h3 { font-size: 1.1em; }
+        
+        /* Markdown 样式增强 */
+        .markdown-content {
+            overflow-x: auto;
+        }
+        .markdown-content h2 { 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #13c8ec;
+            margin: 1.5em 0 0.8em 0;
+            background: rgba(19, 200, 236, 0.05);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #13c8ec;
+        }
         .markdown-content p { 
-            margin-bottom: 0.5em; 
-            line-height: 1.6;
+            margin-bottom: 0.8em; 
+            line-height: 1.7;
+            color: #e2e8f0;
         }
-        .markdown-content ul, .markdown-content ol {
-            margin-left: 1.5em;
-            margin-bottom: 0.5em;
+        .markdown-content h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #8be6f7;
+            margin: 1.2em 0 0.7em 0;
         }
-        .markdown-content li { 
-            margin-bottom: 0.25em;
-            line-height: 1.5;
+        .markdown-content ul,
+        .markdown-content ol {
+            margin: 0.75em 0 1em 0;
+            padding-left: 1.35rem;
+            color: #d9e6f2;
         }
-        .markdown-content code {
-            background: rgba(0,0,0,0.3);
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+        .markdown-content li {
+            margin-bottom: 0.55em;
+            line-height: 1.75;
+        }
+        .markdown-content li::marker {
             color: #13c8ec;
         }
-        .markdown-content pre {
-            background: rgba(0,0,0,0.3);
-            padding: 1em;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 0.5em 0;
-        }
-        .markdown-content pre code {
-            background: none;
-            padding: 0;
-            color: #fff;
+        .markdown-content strong {
+            color: #f8fafc;
+            font-weight: 700;
         }
         .markdown-content blockquote {
-            border-left: 3px solid #13c8ec;
-            padding-left: 1em;
-            margin: 0.5em 0;
-            opacity: 0.8;
+            margin: 1rem 0;
+            padding: 0.9rem 1rem;
+            border-left: 3px solid rgba(19, 200, 236, 0.55);
+            background: rgba(19, 200, 236, 0.07);
+            border-radius: 0 12px 12px 0;
+            color: #cfe8f3;
         }
-        .markdown-content a {
-            color: #13c8ec;
-            text-decoration: underline;
+        .markdown-content hr {
+            border: 0;
+            border-top: 1px solid rgba(19, 200, 236, 0.14);
+            margin: 1.2rem 0;
         }
-        .markdown-content table {
-            border-collapse: collapse;
+
+        .markdown-content code {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            border-radius: 7px;
+            background: rgba(19, 200, 236, 0.12);
+            color: #8be6f7;
+            font-size: 0.84em;
+        }
+
+        .markdown-content pre {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 14px;
+            background: rgba(9, 20, 24, 0.78);
+            border: 1px solid rgba(19, 200, 236, 0.12);
+            overflow-x: auto;
+        }
+
+        .markdown-content pre code {
+            display: block;
+            padding: 0;
+            background: transparent;
+            color: #d8f3f8;
+        }
+
+        .md-structured-card {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .md-structured-card > :first-child {
+            margin-top: 0;
+        }
+
+        .md-structured-card > :last-child {
+            margin-bottom: 0;
+        }
+
+        .md-structured-card .structured-lead {
+            margin-bottom: 0;
+            padding: 0.95rem 1rem;
+            border-radius: 16px;
+            background: rgba(19, 200, 236, 0.08);
+            border: 1px solid rgba(19, 200, 236, 0.12);
+            color: #dff9ff;
+        }
+
+        .md-product-detail {
+            gap: 1.1rem;
+        }
+
+        .product-hero {
+            display: grid;
+            grid-template-columns: 168px minmax(0, 1fr);
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 22px;
+            background: linear-gradient(135deg, rgba(19, 200, 236, 0.12), rgba(13, 148, 136, 0.12));
+            border: 1px solid rgba(19, 200, 236, 0.18);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .product-hero--compact {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .product-cover {
+            min-height: 168px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(19, 200, 236, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-cover img {
             width: 100%;
-            margin: 0.5em 0;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            background: #fff;
         }
-        .markdown-content th, .markdown-content td {
-            border: 1px solid #325e67;
-            padding: 0.5em;
-            text-align: left;
+
+        .product-summary {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
+
+        .product-badge {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            padding: 0.35rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(10, 17, 19, 0.58);
+            border: 1px solid rgba(19, 200, 236, 0.18);
+            color: #8be6f7;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .product-title {
+            margin: 0 !important;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #f8fafc !important;
+        }
+
+        .product-title strong {
+            color: #ffffff;
+            font-size: 1.14rem;
+        }
+
+        .detail-grid,
+        .insight-table {
+            width: 100%;
+            white-space: normal;
+        }
+
+        .detail-grid th:first-child,
+        .detail-grid td:first-child {
+            width: 128px;
+            color: #8be6f7;
+            font-weight: 700;
+        }
+
+        .detail-grid td:nth-child(2) {
+            color: #eff6ff;
+        }
+
+        .md-insight-board {
+            gap: 1rem;
+        }
+
+        .md-insight-board .insight-table {
+            background: linear-gradient(180deg, rgba(9, 20, 24, 0.74), rgba(16, 31, 34, 0.86));
+            border-color: rgba(19, 200, 236, 0.16);
+        }
+
+        .quick-list,
+        .structured-list {
+            list-style: none;
+            margin: 0.2rem 0 0;
+            padding-left: 0;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .quick-list__item,
+        .structured-list li {
+            position: relative;
+            margin: 0;
+            padding: 0.95rem 1rem 0.95rem 2.85rem;
+            border-radius: 16px;
+            background: rgba(9, 20, 24, 0.54);
+            border: 1px solid rgba(19, 200, 236, 0.12);
+            color: #dcecf4;
+            line-height: 1.72;
+        }
+
+        .quick-list__item::before,
+        .structured-list li::before {
+            content: "";
+            position: absolute;
+            left: 1.1rem;
+            top: 1.18rem;
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 999px;
+            background: #13c8ec;
+            box-shadow: 0 0 0 4px rgba(19, 200, 236, 0.14);
+        }
+
+        .markdown-content table {
+            display: block;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 1.25rem 0;
+            background: rgba(10, 25, 30, 0.4);
+            border: 1px solid rgba(19, 200, 236, 0.2);
+            border-radius: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
         .markdown-content th {
-            background: rgba(19, 200, 236, 0.1);
-            font-weight: bold;
+            background: rgba(19, 200, 236, 0.15);
+            color: #13c8ec;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid rgba(19, 200, 236, 0.2);
+        }
+
+        .markdown-content td {
+            padding: 0.85rem 0.75rem;
+            color: #cbd5e1;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(19, 200, 236, 0.05);
+            vertical-align: middle;
+        }
+
+        .markdown-content tr:last-child td { border-bottom: none; }
+        .markdown-content tr:hover { background: rgba(19, 200, 236, 0.04); }
+
+        .markdown-content td img {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            border: 1px solid rgba(19, 200, 236, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #fff;
+            padding: 2px;
+        }
+        .markdown-content td img:hover {
+            transform: scale(1.5) translateY(-5px);
+            z-index: 50;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .markdown-content a[href*="goods_detail"] {
+            background: linear-gradient(135deg, #13c8ec 0%, #0ea5c7 100%);
+            color: #0c1a1d !important;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            text-decoration: none !important;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(19, 200, 236, 0.3);
         }
         
-        @keyframes typing {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
+        .markdown-content a[href*="goods_detail"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(19, 200, 236, 0.5);
+            filter: brightness(1.1);
         }
-        .typing-indicator span {
-            animation: typing 1.4s infinite;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        /* 亮色模式覆盖 */
-        html:not(.dark) .bg-surface-dark { background-color: #ffffff !important; }
-        html:not(.dark) .bg-card-dark { background-color: #ffffff !important; }
-        html:not(.dark) .bg-input-bg { background-color: #f3f4f6 !important; }
-        html:not(.dark) .border-input-border { border-color: #e5e7eb !important; }
-        html:not(.dark) .text-text-secondary { color: #6b7280 !important; }
-        html:not(.dark) .bg-background-dark { background-color: #f9fafb !important; }
+        .message-bubble {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* 侧边栏样式增强 */
+        .session-item {
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        .session-item.active {
+            background: rgba(19, 200, 236, 0.12) !important;
+            border-color: rgba(19, 200, 236, 0.3) !important;
+            box-shadow: inset 0 0 15px rgba(19, 200, 236, 0.05);
+        }
+
+        /* 建议卡片 */
+        .suggestion-chip {
+            background: rgba(25, 47, 51, 0.5);
+            border: 1px solid rgba(19, 200, 236, 0.1);
+            transition: all 0.2s;
+        }
+        .suggestion-chip:hover {
+            background: rgba(19, 200, 236, 0.15);
+            border-color: #13c8ec;
+            transform: translateY(-2px);
+        }
+
+        /* 输入区 */
+        .input-container {
+            background: rgba(22, 40, 43, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(19, 200, 236, 0.2);
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #13c8ec;
+            animation: pulse-soft 1.2s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* 亮色模式支持 */
+        html:not(.dark) body { background: #f8fafc; }
+        html:not(.dark) .glass-panel { background: rgba(255, 255, 255, 0.8); border-color: rgba(203, 213, 225, 0.5); }
+        html:not(.dark) .main-shell { background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.98)); border-color: rgba(203, 213, 225, 0.65); box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08); }
+        html:not(.dark) .message-ai { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        html:not(.dark) .message-ai--detail { background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.98)); border-color: rgba(103, 232, 249, 0.35); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08); }
+        html:not(.dark) .markdown-content p { color: #334155; }
+        html:not(.dark) .markdown-content h3 { color: #0891b2; }
+        html:not(.dark) .markdown-content ul,
+        html:not(.dark) .markdown-content ol,
+        html:not(.dark) .markdown-content li { color: #475569; }
+        html:not(.dark) .markdown-content strong { color: #0f172a; }
+        html:not(.dark) .markdown-content blockquote { background: #f0f9ff; color: #334155; border-left-color: #06b6d4; }
+        html:not(.dark) .markdown-content td { color: #475569; }
+        html:not(.dark) .markdown-content table { background: #fff; border-color: #e2e8f0; }
+        html:not(.dark) .markdown-content code { background: #ecfeff; color: #0f766e; }
+        html:not(.dark) .markdown-content pre { background: #f8fafc; border-color: #e2e8f0; }
+        html:not(.dark) .markdown-content pre code { color: #334155; }
+        html:not(.dark) .md-structured-card .structured-lead { background: #f0fdfa; border-color: #ccfbf1; color: #0f172a; }
+        html:not(.dark) .product-hero { background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(20, 184, 166, 0.08)); border-color: rgba(103, 232, 249, 0.35); }
+        html:not(.dark) .product-cover { background: #ffffff; border-color: #dbeafe; }
+        html:not(.dark) .product-title { color: #0f172a !important; }
+        html:not(.dark) .product-title strong { color: #020617; }
+        html:not(.dark) .product-badge { background: #ecfeff; border-color: #bae6fd; color: #0f766e; }
+        html:not(.dark) .detail-grid td:nth-child(2) { color: #0f172a; }
+        html:not(.dark) .md-insight-board .insight-table { background: #ffffff; border-color: #e2e8f0; }
+        html:not(.dark) .quick-list__item,
+        html:not(.dark) .structured-list li { background: #ffffff; border-color: #e2e8f0; color: #334155; }
+        html:not(.dark) .input-container { background: #fff; border-color: #e2e8f0; }
+
+        @media (max-width: 768px) {
+            .message-ai--detail {
+                width: 100%;
+                max-width: 100% !important;
+            }
+
+            .product-hero {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .product-cover {
+                min-height: 220px;
+            }
+
+            .detail-grid th:first-child,
+            .detail-grid td:first-child {
+                width: auto;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            #app {
+                padding: 0;
+                gap: 0;
+            }
+
+            .glass-panel,
+            .main-shell {
+                border-radius: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-sans text-slate-900 dark:text-white antialiased">
 
 <div id="app" class="flex h-screen overflow-hidden">
     <!-- 侧边栏 -->
-    <aside class="w-64 bg-surface-dark border-r border-input-border flex flex-col flex-shrink-0">
-        <div class="h-16 flex items-center px-6 border-b border-input-border">
-            <a href="index.html" class="flex items-center gap-3 hover:text-primary transition-colors">
-                <span class="material-symbols-outlined text-primary">arrow_back</span>
-                <span class="font-bold">返回首页</span>
+    <aside class="w-64 xl:w-[272px] bg-surface-dark border-r border-input-border/30 flex flex-col flex-shrink-0 glass-panel shadow-[0_18px_45px_rgba(0,0,0,0.28)]">
+        <div class="h-16 flex items-center px-6 border-b border-input-border/20">
+            <a href="index.html" class="flex items-center gap-3 text-primary/80 hover:text-primary transition-all">
+                <span class="material-symbols-outlined">arrow_back</span>
+                <span class="font-bold tracking-tight">返回首页</span>
             </a>
         </div>
         
         <div class="flex-1 p-4 overflow-y-auto">
-            <h3 class="text-sm text-text-secondary mb-3 font-semibold">会话历史</h3>
-            <div v-if="sessions.length === 0" class="text-xs text-text-secondary/80 px-2 py-2">
-                暂无历史会话
+            <h3 class="text-[11px] tracking-[2px] text-text-secondary/50 mb-4 px-2 font-bold">历史会话</h3>
+            
+            <div v-if="sessions.length === 0" class="text-center py-10">
+                <span class="material-symbols-outlined text-text-secondary/20 text-4xl mb-2">history</span>
+                <div class="text-xs text-text-secondary/40">暂无历史记录</div>
             </div>
+
             <div class="space-y-2">
                 <div v-for="session in sessions" :key="session.session_id"
-                     :class="['relative group w-full text-left p-3 rounded-lg text-sm transition-colors border', session.session_id === sessionId ? 'bg-primary/10 border-primary/40 text-white' : 'bg-input-bg border-transparent hover:border-primary/30']">
-                    <div @click="selectSession(session)" class="cursor-pointer pr-6">
-                        <div class="font-medium truncate">{{ formatSessionTitle(session) }}</div>
-                        <div class="text-xs text-text-secondary mt-1">{{ formatSessionTime(session.updated_at || session.created_at) }}</div>
+                     @click="selectSession(session)"
+                     :class="['session-item relative group w-full text-left p-4 rounded-xl cursor-pointer', 
+                              session.session_id === sessionId ? 'active' : 'hover:bg-primary/5']">
+                    <div class="pr-6">
+                        <div class="font-bold text-sm truncate leading-tight mb-1" :class="session.session_id === sessionId ? 'text-primary' : 'text-slate-300'">
+                            {{ formatSessionTitle(session) }}
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-text-secondary/60 font-medium">
+                            <span class="material-symbols-outlined text-[12px]">schedule</span>
+                            {{ formatSessionTime(session.updated_at || session.created_at) }}
+                        </div>
                     </div>
                     <button @click.stop="deleteSession(session.session_id)"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-400 transition-all p-1 rounded"
+                            class="absolute right-3 top-4 opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-400 transition-all p-1.5 rounded-lg hover:bg-red-400/10"
                             title="删除会话">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6l-1 14H6L5 6"></path>
-                            <path d="M10 11v6M14 11v6"></path>
-                            <path d="M9 6V4h6v2"></path>
-                        </svg>
+                        <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
                 </div>
             </div>
@@ -191,47 +598,64 @@
     </aside>
     
     <!-- 主聊天区 -->
-    <main class="flex-1 flex flex-col min-w-0">
+    <main class="main-shell flex-1 flex flex-col min-w-0">
         <!-- 顶部栏 -->
-        <header class="h-16 bg-surface-dark border-b border-input-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary">smart_toy</span>
+        <header class="h-16 bg-surface-dark/35 backdrop-blur-md border-b border-input-border/20 flex-shrink-0 sticky top-0 z-10">
+            <div class="max-w-[1120px] mx-auto h-full w-full px-5 lg:px-8 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                        <span class="material-symbols-outlined text-primary font-bold">smart_toy</span>
+                    </div>
+                    <div>
+                        <h1 class="font-black text-base tracking-tight">智能数据顾问</h1>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-[10px] text-primary/80 font-bold tracking-wider">系统在线</span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="font-bold text-lg">AI 智能助手</h1>
-                    <p class="text-xs text-text-secondary">电商数据分析专家</p>
+                <div class="flex items-center gap-4 md:gap-6">
+                    <div class="hidden md:flex flex-col items-end">
+                        <span class="text-[10px] text-text-secondary/50 font-bold tracking-widest">会话编号</span>
+                        <span class="text-xs font-mono text-primary/70">{{ shortSessionId }}</span>
+                    </div>
+                    <button @click="createNewSession"
+                            class="h-9 px-4 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-background-dark transition-all text-xs font-bold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">add_circle</span>
+                        新建对话
+                    </button>
                 </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-xs text-text-secondary">会话：{{ shortSessionId }}</span>
-                <button @click="createNewSession"
-                        class="h-9 px-3 rounded-md border border-primary/40 text-primary hover:bg-primary/10 transition-colors text-sm">
-                    新建会话
-                </button>
             </div>
         </header>
         
         <!-- 消息列表 -->
-        <div ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+        <div ref="messagesContainer" class="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-7 scroll-smooth">
+            <div class="thread-wrap space-y-6">
             <!-- 欢迎消息 -->
-            <div v-if="messages.length === 0" class="text-center py-12">
-                <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-4xl">psychology</span>
+            <div v-if="messages.length === 0" class="text-center py-14 px-4">
+                <div class="relative w-28 h-28 mx-auto mb-8">
+                    <div class="absolute inset-0 bg-primary/20 rounded-3xl rotate-12 blur-xl animate-pulse"></div>
+                    <div class="relative w-full h-full rounded-3xl bg-surface-dark border border-primary/30 flex items-center justify-center shadow-2xl">
+                        <span class="material-symbols-outlined text-primary text-5xl">analytics</span>
+                    </div>
                 </div>
-                <h2 class="text-xl font-bold mb-2">你好！我是 AI 智能助手</h2>
-                <p class="text-text-secondary">我可以帮你分析电商数据、推荐商品、解答问题</p>
+                <h2 class="text-3xl md:text-4xl font-black mb-4 tracking-tight">欢迎使用智能数据顾问</h2>
+                <p class="text-text-secondary text-lg max-w-lg mx-auto leading-relaxed font-medium">您的专属抖音电商首席数据顾问。基于实时大数据，为您提供从选品到经营的全链路商业决策支持。</p>
             </div>
 
             <!-- 推荐问题区域 -->
-            <div v-if="showSuggestions" class="flex justify-center">
-                <div class="w-full max-w-3xl bg-surface-dark/60 border border-input-border/60 rounded-2xl p-4">
-                    <div class="text-sm text-text-secondary mb-3">推荐问题</div>
-                    <div class="flex flex-wrap gap-3">
+            <div v-if="showSuggestions" class="mt-2">
+                <div class="w-full bg-surface-dark/40 backdrop-blur-xl border border-input-border/20 rounded-[26px] p-6 md:p-7 shadow-2xl">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="material-symbols-outlined text-primary">tips_and_updates</span>
+                        <div class="text-xs font-black text-text-secondary tracking-[2px]">推荐分析</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <button v-for="(suggestion, idx) in suggestions" :key="idx"
                                 @click="sendSuggestion(suggestion)"
-                                class="px-4 py-2 rounded-full bg-input-bg text-sm text-text-secondary hover:text-white hover:bg-primary/20 border border-transparent hover:border-primary/30 transition-colors">
-                            {{ suggestion }}
+                                class="suggestion-chip text-left px-5 py-4 rounded-2xl text-[13px] text-slate-300 font-semibold flex items-center justify-between group">
+                            <span class="flex-1 mr-4">{{ suggestion }}</span>
+                            <span class="material-symbols-outlined text-primary/0 group-hover:text-primary transition-all text-sm group-hover:translate-x-1">arrow_forward_ios_outlined</span>
                         </button>
                     </div>
                 </div>
@@ -239,58 +663,74 @@
             
             <!-- 消息气泡 -->
             <div v-for="(msg, idx) in messages" :key="idx" 
-                 :class="['flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                 :class="['flex gap-3 md:gap-4 message-bubble w-full', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                
                 <!-- AI 头像 -->
-                <div v-if="msg.role === 'assistant'" class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                <div v-if="msg.role === 'assistant'" class="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-inner">
+                    <span class="material-symbols-outlined text-primary text-xl">robot_2</span>
                 </div>
                 
                 <!-- 消息内容 -->
-                <div :class="['max-w-[70%] rounded-2xl px-4 py-3', 
-                              msg.role === 'user' ? 'message-user text-background-dark' : 'message-ai']">
-                    <!-- 用户消息：纯文本 -->
-                    <div v-if="msg.role === 'user'" class="whitespace-pre-wrap">{{ msg.content }}</div>
-                    <!-- AI 消息：Markdown 渲染 -->
-                    <div v-else class="markdown-content" v-html="renderMarkdown(msg.content)"></div>
-                    <div class="text-xs opacity-70 mt-1">{{ msg.time }}</div>
+                <div :class="['relative px-6 py-4 rounded-2xl shadow-sm bubble-inner', 
+                              msg.role === 'user' ? 'message-user' : 'message-ai',
+                              msg.role === 'assistant' && isStructuredCard(msg.content) ? 'message-ai--detail' : '']">
+                    
+                    <!-- 用户消息 -->
+                    <div v-if="msg.role === 'user'" class="text-[15px] leading-relaxed">{{ msg.content }}</div>
+                    
+                    <!-- AI 消息 -->
+                    <div v-else class="markdown-content">
+                        <div v-html="renderMarkdown(msg.content)"></div>
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-2 opacity-40 text-[10px] font-bold" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+                        <span class="material-symbols-outlined text-[12px]">schedule</span>
+                        {{ msg.time }}
+                    </div>
                 </div>
                 
                 <!-- 用户头像 -->
-                <div v-if="msg.role === 'user'" class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-white text-xl">person</span>
+                <div v-if="msg.role === 'user'" class="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 flex items-center justify-center shadow-lg">
+                    <span class="material-symbols-outlined text-slate-200 text-xl">person</span>
                 </div>
             </div>
             
             <!-- AI 正在输入 -->
-            <div v-if="isTyping" class="flex gap-3 justify-start">
-                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+            <div v-if="isTyping" class="flex gap-3 md:gap-4 justify-start message-bubble w-full">
+                <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">robot_2</span>
                 </div>
-                <div class="message-ai rounded-2xl px-4 py-3">
-                    <div class="typing-indicator flex gap-1">
-                        <span class="w-2 h-2 bg-primary rounded-full"></span>
-                        <span class="w-2 h-2 bg-primary rounded-full"></span>
-                        <span class="w-2 h-2 bg-primary rounded-full"></span>
-                    </div>
+                <div class="message-ai rounded-2xl px-6 py-5 flex items-center gap-1.5 shadow-sm">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
                 </div>
+            </div>
+
+            <!-- 底部占位 -->
+            <div class="h-10"></div>
             </div>
         </div>
         
         <!-- 输入框 -->
-        <div class="border-t border-input-border p-4 bg-surface-dark flex-shrink-0">
-            <form @submit.prevent="sendMessage" class="flex gap-3">
-                <input v-model="inputMessage"
-                       :disabled="isTyping"
-                       class="flex-1 h-12 px-4 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-text-secondary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50 transition-all"
-                       placeholder="输入你的问题..."
-                       type="text"/>
-                <button :disabled="isTyping || !inputMessage.trim()"
-                        class="px-6 h-12 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                        type="submit">
-                    <span class="material-symbols-outlined">send</span>
-                    发送
-                </button>
-            </form>
+        <div class="input-container px-4 md:px-6 lg:px-8 py-4 lg:py-5 flex-shrink-0">
+            <div class="max-w-[880px] mx-auto w-full relative group">
+                <form @submit.prevent="sendMessage" class="flex gap-4 bg-background-dark/60 border border-input-border/30 rounded-[22px] p-2 pl-5 shadow-xl focus-within:border-primary/50 transition-all backdrop-blur-xl">
+                    <input v-model="inputMessage"
+                           :disabled="isTyping"
+                           class="flex-1 bg-transparent border-none text-[15px] text-white placeholder:text-text-secondary/50 focus:ring-0 focus:outline-none disabled:opacity-50 font-medium"
+                           placeholder="输入商品名称、类目或商品 ID，仅返回真实数据"
+                           type="text"/>
+                    <button :disabled="isTyping || !inputMessage.trim()"
+                            class="w-12 h-12 rounded-xl bg-primary text-background-dark font-black hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all flex items-center justify-center shadow-lg shadow-primary/20"
+                            type="submit">
+                        <span class="material-symbols-outlined font-bold">send</span>
+                    </button>
+                </form>
+                <div class="text-center mt-3">
+                    <p class="text-[10px] text-text-secondary/30 font-bold tracking-[2px]">由智能数据引擎 v2.0 提供支持</p>
+                </div>
+            </div>
         </div>
     </main>
 </div>
@@ -325,15 +765,9 @@ createApp({
         const messagesContainer = ref(null)
         const isUserScrolling = ref(false)
         const sessionId = ref('')
-        const suggestions = ref([
-            "推荐几个当前热门的商品",
-            "哪些商品佣金最高？",
-            "美妆类目有哪些商品？",
-            "价格在50-100元的商品有哪些？",
-            "帮我分析一下商品销量趋势",
-            "如何提高商品转化率？"
-        ])
+        const suggestions = ref([])
         const sessions = ref([])
+        const currentProductId = ref('') // 当前关联的商品ID
         
         const shortSessionId = computed(() => {
             if (!sessionId.value) return '-'
@@ -341,6 +775,121 @@ createApp({
         })
 
         const showSuggestions = computed(() => messages.value.length === 0)
+
+        const isStructuredCard = (content = '') => {
+            if (typeof content !== 'string' || !content.trim()) return false
+            return [
+                /商品详情/,
+                /高佣金潜力商品优先级/,
+                /当前值得优先关注的商品/,
+                /\|\s*字段\s*\|\s*值\s*\|/i,
+                /\|\s*排名\s*\|/i
+            ].some((pattern) => pattern.test(content))
+        }
+
+        const isProductDetailCard = (content = '') => {
+            if (typeof content !== 'string') return false
+            return /商品详情/.test(content) && (/\|\s*字段\s*\|\s*值\s*\|/i.test(content) || /<img[\s>]/i.test(content))
+        }
+
+        const isInsightBoardCard = (content = '') => {
+            if (typeof content !== 'string') return false
+            return /(高佣金潜力商品优先级|当前值得优先关注的商品|高佣金|优先关注)/.test(content)
+        }
+
+        const findSectionList = (heading) => {
+            let current = heading ? heading.nextElementSibling : null
+            while (current) {
+                if (current.matches('h2, h3')) return null
+                if (current.matches('ul, ol')) return current
+                current = current.nextElementSibling
+            }
+            return null
+        }
+
+        const decorateStructuredLists = (root) => {
+            root.querySelectorAll('h2, h3').forEach((heading) => {
+                const list = findSectionList(heading)
+                if (!list) return
+                if (/快速判断|行动建议|核心判断|下一步/.test(heading.textContent || '')) {
+                    list.classList.add('quick-list')
+                    Array.from(list.children).forEach((item) => item.classList.add('quick-list__item'))
+                    return
+                }
+                if (root.classList.contains('md-insight-board')) {
+                    list.classList.add('structured-list')
+                }
+            })
+        }
+
+        const decorateProductDetail = (root) => {
+            root.classList.add('md-product-detail')
+            const tables = Array.from(root.querySelectorAll('table'))
+            tables.forEach((table, index) => {
+                table.classList.add(index === 0 ? 'detail-grid' : 'insight-table')
+            })
+
+            const detailHeading = Array.from(root.querySelectorAll('h2')).find((node) => /商品详情/.test(node.textContent || ''))
+            let mediaNode = Array.from(root.querySelectorAll('img')).find((img) => !img.closest('table'))
+
+            if (mediaNode && mediaNode.parentElement && mediaNode.parentElement.tagName === 'P' && mediaNode.parentElement.textContent.trim() === '') {
+                mediaNode = mediaNode.parentElement
+            }
+
+            const paragraphs = Array.from(root.querySelectorAll('p')).filter((node) => {
+                if (node.closest('table') || node.closest('li') || node.querySelector('img')) return false
+                return node.textContent.replace(/\s+/g, ' ').trim()
+            })
+            const titleParagraph = paragraphs.find((node) => node.querySelector('strong')) || paragraphs[0]
+
+            if (detailHeading && (mediaNode || titleParagraph)) {
+                const hero = document.createElement('section')
+                hero.className = 'product-hero'
+
+                if (mediaNode) {
+                    const cover = document.createElement('div')
+                    cover.className = 'product-cover'
+                    cover.appendChild(mediaNode)
+                    hero.appendChild(cover)
+                } else {
+                    hero.classList.add('product-hero--compact')
+                }
+
+                const summary = document.createElement('div')
+                summary.className = 'product-summary'
+
+                const badge = document.createElement('div')
+                badge.className = 'product-badge'
+                badge.textContent = '实时商品卡'
+                summary.appendChild(badge)
+
+                if (titleParagraph) {
+                    titleParagraph.classList.add('product-title')
+                    summary.appendChild(titleParagraph)
+                }
+
+                hero.appendChild(summary)
+                detailHeading.insertAdjacentElement('afterend', hero)
+            }
+
+            decorateStructuredLists(root)
+        }
+
+        const decorateInsightBoard = (root) => {
+            root.classList.add('md-insight-board')
+            root.querySelectorAll('table').forEach((table) => table.classList.add('insight-table'))
+
+            const leadParagraph = Array.from(root.querySelectorAll('p')).find((node) => {
+                if (node.closest('table') || node.closest('li') || node.querySelector('img')) return false
+                return node.textContent.replace(/\s+/g, ' ').trim()
+            })
+
+            if (leadParagraph) {
+                leadParagraph.classList.add('structured-lead')
+            }
+
+            decorateStructuredLists(root)
+        }
         
         const getToken = () => localStorage.getItem('token')
         
@@ -369,14 +918,32 @@ createApp({
         
         // Markdown 渲染
         const renderMarkdown = (content) => {
+            const source = typeof content === 'string' ? content : ''
             if (typeof marked === 'undefined') {
-                return content.replace(/\n/g, '<br>')
+                return source.replace(/\n/g, '<br>')
             }
             try {
-                return marked.parse(content)
+                const html = marked.parse(source)
+                if (!isStructuredCard(source) || typeof document === 'undefined') {
+                    return html
+                }
+
+                const wrapper = document.createElement('div')
+                wrapper.className = 'md-structured-card'
+                wrapper.innerHTML = html
+
+                if (isProductDetailCard(source)) {
+                    decorateProductDetail(wrapper)
+                } else if (isInsightBoardCard(source)) {
+                    decorateInsightBoard(wrapper)
+                } else {
+                    decorateStructuredLists(wrapper)
+                }
+
+                return wrapper.outerHTML
             } catch (e) {
                 console.error('Markdown parse error:', e)
-                return content.replace(/\n/g, '<br>')
+                return source.replace(/\n/g, '<br>')
             }
         }
 
@@ -418,6 +985,16 @@ createApp({
                 const result = await response.json()
                 if (result && result.success && Array.isArray(result.data)) {
                     sessions.value = result.data
+                    if (sessions.value.length > 0) {
+                        // 如果有历史会话但当前选中的在历史中不存在，则默认选中第一个
+                        if (!sessions.value.find(s => s.session_id === sessionId.value)) {
+                            sessionId.value = sessions.value[0].session_id
+                            localStorage.setItem(SESSION_KEY, sessionId.value)
+                        }
+                    } else {
+                        // 如果用户一条会话都没有，自动创建一个新的插入数据库（避免界面显示暂无历史且ID不同步）
+                        await createNewSession()
+                    }
                 }
             } catch (e) {
                 console.error('Load sessions error:', e)
@@ -484,7 +1061,7 @@ createApp({
             }
         }
 
-        const createNewSession = () => {
+        const createNewSession = async () => {
             const newSessionId = createSessionId()
             localStorage.setItem(SESSION_KEY, newSessionId)
             sessionId.value = newSessionId
@@ -492,6 +1069,30 @@ createApp({
             inputMessage.value = ''
             isTyping.value = false
             isUserScrolling.value = false
+
+            // 调用后端创建会话，立即显示在侧边栏
+            try {
+                const token = getToken()
+                const res = await fetch(`${API_BASE}/ai/session/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        session_id: newSessionId,
+                        title: '新对话'
+                    })
+                })
+                const result = await res.json()
+                if (result && result.success && result.data) {
+                    // 立即插入到会话列表最前面
+                    sessions.value.unshift(result.data)
+                }
+            } catch (e) {
+                console.error('创建会话失败:', e)
+            }
+
             Toast.success('已新建会话')
         }
         
@@ -532,7 +1133,8 @@ createApp({
                     },
                     body: JSON.stringify({
                         message: message,
-                        session_id: sessionId.value
+                        session_id: sessionId.value,
+                        product_id: currentProductId.value // 将当前页面商品ID传给后端
                     })
                 })
                 
@@ -584,7 +1186,14 @@ createApp({
             } finally {
                 isTyping.value = false
                 if (sendSucceeded) {
-                    loadSessions()
+                    // 重新加载会话列表，同时更新当前会话标题
+                    await loadSessions()
+                    // 更新侧边栏中当前会话的标题（用第一条消息）
+                    const currentSession = sessions.value.find(s => s.session_id === sessionId.value)
+                    if (currentSession && (currentSession.title === '新对话' || !currentSession.title)) {
+                        const titleText = message.length > 20 ? message.slice(0, 20) + '...' : message
+                        currentSession.title = titleText
+                    }
                 }
             }
         }
@@ -594,7 +1203,35 @@ createApp({
             sendMessage()
         }
         
+        // 从后端加载推荐问题
+        const loadSuggestions = async () => {
+            try {
+                const token = getToken()
+                const res = await fetch(`${API_BASE}/ai/suggestions`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const result = await res.json()
+                if (result && result.success && Array.isArray(result.data)) {
+                    suggestions.value = result.data
+                }
+            } catch (e) {
+                console.error('Load suggestions error:', e)
+                // 降级到更丰富的默认列表
+                suggestions.value = [
+                    '分析当前热销商品的市场表现与运营亮点',
+                    '识别当前佣金表现较强的重点商品',
+                    '分析近期商品销量趋势与变化特征',
+                    '分析当前各类目的商品分布与机会方向',
+                    '对比不同类目的佣金效率与经营价值'
+                ]
+            }
+        }
+
         onMounted(() => {
+            // 解析 URL 参数获取商品 ID
+            const urlParams = new URLSearchParams(window.location.search)
+            currentProductId.value = urlParams.get('id') || urlParams.get('product_id') || ''
+            
             const token = getToken()
             if (!token) {
                 window.location.href = 'login.html'
@@ -602,8 +1239,13 @@ createApp({
             }
             
             sessionId.value = loadSessionId()
-            loadSessionHistory()
-            loadSessions()
+            
+            // 首次加载：先加载会话列表。如果列表空会自动创建，如果不空则加载选中的消息记录
+            loadSessions().then(() => {
+                loadSessionHistory()
+            })
+            
+            loadSuggestions()
             
             // 监听滚动事件
             if (messagesContainer.value) {
@@ -623,6 +1265,7 @@ createApp({
             suggestions,
             sessions,
             showSuggestions,
+            isStructuredCard,
             sendMessage,
             sendSuggestion,
             renderMarkdown,
