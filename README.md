@@ -750,5 +750,3 @@ DY_Predictionin/
 ```
 
 ---
-
-*本文档由 Claude Code 自动生成，基于源码分析。*
