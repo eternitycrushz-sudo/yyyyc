@@ -462,3 +462,157 @@ def get_operation_logs():
     except Exception as e:
         logger.error(f"获取操作日志失败: {e}", exc_info=True)
         return jsonify({'code': -1, 'msg': str(e)}), 500
+
+
+# ===================== 密码重置申请管理 =====================
+
+@settings_bp.route('/reset_requests', methods=['GET'])
+@login_required
+@permission_required('user:update')
+def list_reset_requests():
+    """获取密码重置申请列表"""
+    try:
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 20))
+        status_filter = request.args.get('status', '')  # 0=待处理 1=已处理 2=已拒绝
+        offset = (page - 1) * page_size
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        where = "WHERE 1=1"
+        params = []
+        if status_filter != '':
+            where += " AND status = %s"
+            params.append(int(status_filter))
+
+        cursor.execute(f"SELECT COUNT(*) as total FROM sys_password_reset_request {where}", params)
+        total = cursor.fetchone()['total']
+
+        cursor.execute(f"""
+            SELECT * FROM sys_password_reset_request {where}
+            ORDER BY CASE WHEN status = 0 THEN 0 ELSE 1 END, created_at DESC
+            LIMIT %s OFFSET %s
+        """, params + [page_size, offset])
+        items = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'list': items,
+                'total': total,
+                'page': page,
+                'page_size': page_size
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取重置申请失败: {e}", exc_info=True)
+        return jsonify({'code': -1, 'msg': str(e)}), 500
+
+
+@settings_bp.route('/reset_requests/<int:req_id>/handle', methods=['POST'])
+@login_required
+@permission_required('user:update')
+def handle_reset_request(req_id):
+    """处理密码重置申请: approve/reject"""
+    try:
+        data = request.json or {}
+        action = data.get('action', '')  # 'approve' or 'reject'
+        new_password = data.get('password', '123456')
+
+        if action not in ('approve', 'reject'):
+            return jsonify({'code': -1, 'msg': '无效的操作'}), 400
+
+        admin_id = g.current_user['user_id']
+        admin_username = g.current_user.get('username', '')
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 查询该申请
+        cursor.execute("SELECT * FROM sys_password_reset_request WHERE id = %s", (req_id,))
+        req = cursor.fetchone()
+        if not req:
+            cursor.close()
+            conn.close()
+            return jsonify({'code': -1, 'msg': '申请不存在'}), 404
+
+        if req['status'] != 0:
+            cursor.close()
+            conn.close()
+            return jsonify({'code': -1, 'msg': '该申请已被处理'}), 400
+
+        if action == 'approve':
+            # 重置用户密码 + 设置强制修改标记
+            password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+            cursor.execute(
+                "UPDATE sys_user SET password = %s, force_pwd_change = 1 WHERE username = %s",
+                (password_hash, req['username'])
+            )
+
+            # 获取用户ID用于发通知
+            cursor.execute("SELECT id FROM sys_user WHERE username = %s", (req['username'],))
+            target_user = cursor.fetchone()
+
+            # 更新申请状态
+            cursor.execute("""
+                UPDATE sys_password_reset_request
+                SET status = 1, temporary_password = %s, handler_id = %s, handler_username = %s, handled_at = NOW()
+                WHERE id = %s
+            """, (new_password, admin_id, admin_username, req_id))
+
+            # 给用户发通知
+            if target_user:
+                cursor.execute(
+                    "INSERT INTO sys_notification (user_id, type, title, content, source) VALUES (%s, %s, %s, %s, %s)",
+                    (target_user['id'], 'warning', '密码已重置',
+                     f'您的密码已被管理员重置为 {new_password}，登录后请立即修改密码。', 'system')
+                )
+
+            # 记录操作日志
+            cursor.execute("""
+                INSERT INTO sys_operation_log (user_id, username, action, module, detail, ip, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (admin_id, admin_username, '重置用户密码', 'password_reset',
+                  f"管理员重置了用户 {req['username']} 的密码", request.remote_addr, 1))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return jsonify({'code': 0, 'msg': f"已重置用户 {req['username']} 的密码为 {new_password}"})
+
+        else:  # reject
+            cursor.execute("""
+                UPDATE sys_password_reset_request
+                SET status = 2, handler_id = %s, handler_username = %s, handled_at = NOW()
+                WHERE id = %s
+            """, (admin_id, admin_username, req_id))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return jsonify({'code': 0, 'msg': '已拒绝该申请'})
+
+    except Exception as e:
+        logger.error(f"处理重置申请失败: {e}", exc_info=True)
+        return jsonify({'code': -1, 'msg': str(e)}), 500
+
+
+@settings_bp.route('/reset_requests/pending_count', methods=['GET'])
+@login_required
+@permission_required('user:list')
+def get_pending_reset_count():
+    """获取待处理的密码重置申请数"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as cnt FROM sys_password_reset_request WHERE status = 0")
+        cnt = cursor.fetchone()['cnt']
+        cursor.close()
+        conn.close()
+        return jsonify({'code': 0, 'data': {'count': cnt}})
+    except Exception as e:
+        return jsonify({'code': -1, 'msg': str(e)}), 500
