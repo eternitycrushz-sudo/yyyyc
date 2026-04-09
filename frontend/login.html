@@ -176,40 +176,160 @@
                     </form>
                     
                     <!-- 忘记密码弹窗 -->
-                    <div v-if="showResetDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="showResetDialog = false">
-                        <div class="w-full max-w-md mx-4 rounded-2xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#325e67]/30 shadow-2xl p-8">
-                            <div class="flex items-center justify-between mb-6">
-                                <h3 class="text-xl font-bold text-slate-900 dark:text-white">重置密码</h3>
-                                <button @click="showResetDialog = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                    <div v-if="showResetDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md">
+                        <div class="relative w-full max-w-2xl mx-4 overflow-hidden rounded-[28px] bg-white dark:bg-surface-dark border border-white/60 dark:border-[#3a6972]/40 shadow-[0_30px_80px_rgba(15,23,42,0.35)]">
+                            <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-primary/18 via-cyan-100/40 to-transparent dark:from-primary/12 dark:via-cyan-400/8 dark:to-transparent pointer-events-none"></div>
+                            <div class="relative p-8">
+                            <div class="flex items-start justify-between mb-6">
+                                <div>
+                                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold tracking-[0.18em] uppercase mb-3">
+                                        <span class="material-symbols-outlined text-sm">lock_reset</span>
+                                        Password Reset
+                                    </div>
+                                    <h3 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">忘记密码</h3>
+                                    <p class="mt-2 text-sm text-slate-500 dark:text-text-secondary">提交申请或查询处理进度。此窗口仅可通过右上角关闭，避免误触丢失内容。</p>
+                                </div>
+                                <button @click="showResetDialog = false" class="mt-1 w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
                                     <span class="material-symbols-outlined">close</span>
                                 </button>
                             </div>
-                            <form @submit.prevent="handleResetPassword" class="flex flex-col gap-4">
+                            <div class="mb-6 flex rounded-2xl bg-slate-100/90 dark:bg-[#10272b] p-1.5 border border-slate-200/80 dark:border-white/5">
+                                <button @click="resetTab = 'submit'" type="button"
+                                        :class="resetTab === 'submit' ? 'bg-white dark:bg-surface-dark text-slate-900 dark:text-white shadow-[0_10px_24px_rgba(15,23,42,0.08)]' : 'text-slate-500 dark:text-text-secondary'"
+                                        class="flex-1 h-11 rounded-xl text-sm font-semibold transition-all">提交申请</button>
+                                <button @click="resetTab = 'status'" type="button"
+                                        :class="resetTab === 'status' ? 'bg-white dark:bg-surface-dark text-slate-900 dark:text-white shadow-[0_10px_24px_rgba(15,23,42,0.08)]' : 'text-slate-500 dark:text-text-secondary'"
+                                        class="flex-1 h-11 rounded-xl text-sm font-semibold transition-all">查询进度</button>
+                            </div>
+
+                            <form v-if="resetTab === 'submit'" @submit.prevent="handleResetRequest" class="flex flex-col gap-4">
+                                <div class="rounded-2xl border border-[#244047] bg-[#20363b] px-5 py-4 text-sm leading-6 text-[#a9c0c7]">
+                                    提交申请后，管理员会在系统设置中看到您的请求，并为您重置密码。
+                                </div>
                                 <label class="flex flex-col gap-2">
-                                    <span class="text-slate-700 dark:text-white text-sm font-medium">账号</span>
+                                    <span class="text-slate-700 dark:text-white text-sm font-semibold">账号</span>
                                     <input v-model="resetForm.username"
-                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                                           placeholder="请输入要重置密码的用户名" type="text"/>
+                                           class="w-full h-14 px-5 rounded-2xl bg-[#12262a] border border-[#2a4b52] text-white placeholder:text-[#6d8d95] focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-base"
+                                           placeholder="请输入您的用户名" type="text"/>
                                 </label>
                                 <label class="flex flex-col gap-2">
-                                    <span class="text-slate-700 dark:text-white text-sm font-medium">新密码</span>
-                                    <input v-model="resetForm.newPassword"
-                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                                           placeholder="请输入新密码（至少6位）" type="password"/>
-                                </label>
-                                <label class="flex flex-col gap-2">
-                                    <span class="text-slate-700 dark:text-white text-sm font-medium">确认新密码</span>
-                                    <input v-model="resetForm.confirmPassword"
-                                           class="w-full h-12 px-4 rounded-lg bg-white dark:bg-input-bg border border-slate-200 dark:border-input-border text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#5d7c85] focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                                           placeholder="请再次输入新密码" type="password"/>
+                                    <span class="text-slate-700 dark:text-white text-sm font-semibold">申请原因 <span class="text-text-secondary">(可选)</span></span>
+                                    <textarea v-model="resetForm.reason"
+                                              class="w-full h-28 px-5 py-4 rounded-2xl bg-[#12262a] border border-[#2a4b52] text-white placeholder:text-[#6d8d95] focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-base resize-none"
+                                              placeholder="请简述原因，例如：忘记密码"></textarea>
                                 </label>
                                 <button :disabled="resetLoading"
-                                        class="mt-2 flex w-full items-center justify-center rounded-lg bg-primary h-12 px-6 text-background-dark text-base font-bold hover:bg-[#0ebacb] active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(19,200,236,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        class="mt-2 inline-flex h-12 px-6 items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-cyan-400 text-background-dark text-sm font-black tracking-wide hover:brightness-105 active:scale-[0.99] transition-all duration-200 shadow-[0_16px_28px_rgba(19,200,236,0.24)] disabled:opacity-50 disabled:cursor-not-allowed"
                                         type="submit">
                                     <span v-if="resetLoading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
-                                    {{ resetLoading ? '重置中...' : '重置密码' }}
+                                    {{ resetLoading ? '提交中...' : '提交申请' }}
                                 </button>
                             </form>
+
+                            <div v-else class="flex flex-col gap-4">
+                                <div class="rounded-2xl border border-[#244047] bg-[#20363b] px-5 py-4 text-sm leading-6 text-[#a9c0c7]">
+                                    输入用户名即可查看最近一次申请的处理状态。管理员完成后，这里会直接显示临时密码。
+                                </div>
+                                <label class="flex flex-col gap-2 w-full">
+                                    <span class="text-slate-700 dark:text-white text-sm font-semibold">账号</span>
+                                    <input v-model="statusForm.username"
+                                           class="w-full h-14 px-5 rounded-2xl bg-[#12262a] border border-[#2a4b52] text-white placeholder:text-[#6d8d95] focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-base"
+                                           placeholder="请输入您的用户名" type="text"/>
+                                </label>
+                                <button @click="handleQueryResetStatus" :disabled="statusLoading"
+                                        class="mt-2 inline-flex h-12 px-6 items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-cyan-400 text-background-dark text-sm font-black tracking-wide hover:brightness-105 active:scale-[0.99] transition-all duration-200 shadow-[0_16px_28px_rgba(19,200,236,0.24)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        type="button">
+                                    <span v-if="statusLoading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                                    {{ statusLoading ? '查询中...' : '查询进度' }}
+                                </button>
+                                <div v-if="statusResult" class="rounded-2xl border border-slate-200 dark:border-input-border bg-gradient-to-br from-slate-50 to-white dark:from-[#173136] dark:to-[#11262a] p-5 text-sm shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+                                    <div class="flex items-start justify-between gap-4 mb-5">
+                                        <div>
+                                            <div class="text-base font-bold text-slate-900 dark:text-white">重置进度</div>
+                                            <div class="text-xs text-slate-500 dark:text-text-secondary mt-1">{{ statusResult.message }}</div>
+                                        </div>
+                                        <div :class="getStatusTone().badge" class="shrink-0 rounded-full px-3 py-1 text-xs font-bold">
+                                            {{ getStatusTone().label }}
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div v-for="step in getResetProgressSteps(statusResult)" :key="step.key" :class="step.done ? 'border-primary/50 bg-primary/10' : step.active ? 'border-amber-400/50 bg-amber-400/10' : 'border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/20'" class="relative rounded-2xl border p-4 min-h-[148px]">
+                                            <div v-if="step.index < 3" :class="step.done ? 'bg-primary/50' : step.active ? 'bg-amber-400/40' : 'bg-slate-200 dark:bg-slate-700'" class="hidden md:block absolute top-8 -right-3 w-6 h-0.5 rounded-full"></div>
+                                            <div :class="step.done ? 'bg-primary text-background-dark shadow-[0_0_0_6px_rgba(19,200,236,0.12)]' : step.active ? 'bg-amber-400 text-slate-900 shadow-[0_0_0_6px_rgba(251,191,36,0.16)]' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300'" class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all mb-4">
+                                                {{ step.index }}
+                                            </div>
+                                            <div :class="step.done || step.active ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'" class="font-bold leading-6">
+                                                {{ step.title }}
+                                            </div>
+                                            <div :class="step.done || step.active ? 'text-slate-600 dark:text-text-secondary' : 'text-slate-400 dark:text-slate-500'" class="mt-2 text-xs leading-5">
+                                                {{ step.desc }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="statusResult.status === 1" class="mt-5 rounded-xl border border-emerald-200/70 dark:border-emerald-400/20 bg-emerald-50 dark:bg-emerald-500/10 p-4">
+                                        <div class="text-xs font-medium uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">Temporary Password</div>
+                                        <div class="mt-2 flex items-center justify-between gap-3">
+                                            <div class="text-2xl font-black tracking-[0.2em] text-emerald-700 dark:text-emerald-200">{{ statusResult.temporary_password }}</div>
+                                            <div class="text-right text-xs text-emerald-700/80 dark:text-emerald-200/80">请立即登录并修改密码</div>
+                                        </div>
+                                    </div>
+
+                                    <div v-else-if="statusResult.status === 2" class="mt-5 rounded-xl border border-red-200/70 dark:border-red-400/20 bg-red-50 dark:bg-red-500/10 p-4 text-xs leading-5 text-red-600 dark:text-red-300">
+                                        管理员未通过本次申请，请联系管理员确认账号信息后重新提交。
+                                    </div>
+
+                                    <div v-else-if="statusResult.status === -1" class="mt-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/20 p-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                        暂未查到申请记录。请先在“提交申请”页发起密码重置请求。
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 强制修改密码弹窗 -->
+                    <div v-if="showForceChangePwd" class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(3,10,12,0.76)] backdrop-blur-md">
+                        <div class="relative w-full max-w-md mx-4 overflow-hidden rounded-[30px] bg-[#162a2e] border border-[#29464c] shadow-[0_32px_80px_rgba(0,0,0,0.45)]">
+                            <div class="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-[#203a3f] via-[#1b3237] to-transparent pointer-events-none"></div>
+                            <div class="relative p-7">
+                                <div class="flex items-start gap-4 mb-6">
+                                    <div class="w-12 h-12 rounded-2xl bg-[#123540] text-[#21c8f6] flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-outlined text-[26px]">lock</span>
+                                    </div>
+                                    <div>
+                                        <div class="inline-flex items-center rounded-full bg-[#123540] text-[#21c8f6] px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase mb-3">Password Update</div>
+                                        <h3 class="text-[36px] leading-none font-black tracking-tight text-white">必须修改密码</h3>
+                                        <p class="mt-3 text-[15px] leading-6 text-[#a8c1c7]">管理员已重置您的密码。请先设置新的登录密码，完成后才能进入系统。</p>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl border border-[#244047] bg-[#20363b] px-4 py-3 mb-5 text-[13px] leading-6 text-[#a9c0c7]">
+                                    新密码至少 6 位。建议使用数字、字母和符号组合，避免使用过于简单的常见密码。
+                                </div>
+
+                                <form @submit.prevent="handleForceChangePwd" class="flex flex-col gap-4">
+                                    <label class="flex flex-col gap-2">
+                                        <span class="text-[#dce7ea] text-sm font-semibold">新密码</span>
+                                        <input v-model="forceChangePwdForm.newPassword"
+                                               class="w-full h-14 px-4 rounded-2xl bg-[#12262a] border border-[#2a4b52] text-white placeholder:text-[#6f8f96] focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm"
+                                               placeholder="请输入新密码（至少6位）" type="password"/>
+                                    </label>
+                                    <label class="flex flex-col gap-2">
+                                        <span class="text-[#dce7ea] text-sm font-semibold">确认新密码</span>
+                                        <input v-model="forceChangePwdForm.confirmPassword"
+                                               class="w-full h-14 px-4 rounded-2xl bg-[#12262a] border border-[#2a4b52] text-white placeholder:text-[#6f8f96] focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm"
+                                               placeholder="请再次输入新密码" type="password"/>
+                                    </label>
+                                    <button :disabled="forceChangePwdLoading"
+                                            class="mt-2 flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-cyan-400 h-14 px-6 text-[#102226] text-base font-black tracking-wide hover:brightness-105 active:scale-[0.99] transition-all duration-200 shadow-[0_18px_34px_rgba(19,200,236,0.22)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                            type="submit">
+                                        <span v-if="forceChangePwdLoading" class="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                                        {{ forceChangePwdLoading ? '修改中...' : '确认修改' }}
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
 
@@ -240,12 +360,25 @@ createApp({
         const error = ref('')
         const showPassword = ref(false)
         const showResetDialog = ref(false)
+        const resetTab = ref('submit')
         const resetLoading = ref(false)
         const resetForm = reactive({
             username: '',
+            reason: ''
+        })
+        const statusLoading = ref(false)
+        const statusForm = reactive({
+            username: ''
+        })
+        const statusResult = ref(null)
+        const showForceChangePwd = ref(false)
+        const forceChangePwdLoading = ref(false)
+        const forceChangePwdForm = reactive({
             newPassword: '',
             confirmPassword: ''
         })
+        let savedToken = null
+        let savedUser = null
         
         // 检查是否已登录
         onMounted(() => {
@@ -292,6 +425,19 @@ createApp({
                 const result = await response.json()
                 
                 if (result.success) {
+                    // 检查是否需要强制修改密码
+                    if (result.data.force_pwd_change) {
+                        // 先保存 token，但不跳转
+                        savedToken = result.data.token
+                        savedUser = result.data.user
+                        localStorage.setItem('token', result.data.token)
+                        localStorage.setItem('user', JSON.stringify(result.data.user))
+                        
+                        Toast.warning('您的密码已被重置，请设置新密码')
+                        showForceChangePwd.value = true
+                        return
+                    }
+                    
                     // 保存 token 和用户信息
                     localStorage.setItem('token', result.data.token)
                     localStorage.setItem('user', JSON.stringify(result.data.user))
@@ -320,17 +466,9 @@ createApp({
             }
         }
         
-        const handleResetPassword = async () => {
+        const handleResetRequest = async () => {
             if (!resetForm.username.trim()) {
                 Toast.warning('请输入用户名')
-                return
-            }
-            if (!resetForm.newPassword || resetForm.newPassword.length < 6) {
-                Toast.warning('新密码长度至少6位')
-                return
-            }
-            if (resetForm.newPassword !== resetForm.confirmPassword) {
-                Toast.warning('两次输入的密码不一致')
                 return
             }
 
@@ -341,23 +479,148 @@ createApp({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: resetForm.username.trim(),
-                        new_password: resetForm.newPassword
+                        reason: resetForm.reason.trim()
                     })
                 })
                 const result = await response.json()
                 if (result.success) {
                     Toast.success(result.message)
-                    showResetDialog.value = false
-                    resetForm.username = ''
-                    resetForm.newPassword = ''
-                    resetForm.confirmPassword = ''
+                    resetTab.value = 'status'
+                    statusForm.username = resetForm.username.trim()
+                    statusResult.value = { status: 0, message: '申请已提交，请等待管理员处理' }
+                    resetForm.reason = ''
                 } else {
-                    Toast.error(result.message || '重置失败')
+                    Toast.error(result.message || '提交失败')
                 }
             } catch (e) {
                 Toast.error('网络错误，请检查后端服务')
             } finally {
                 resetLoading.value = false
+            }
+        }
+
+        const handleQueryResetStatus = async () => {
+            if (!statusForm.username.trim()) {
+                Toast.warning('请输入用户名')
+                return
+            }
+
+            statusLoading.value = true
+            try {
+                const response = await fetch(`${API_BASE}/auth/reset-request-status?username=${encodeURIComponent(statusForm.username.trim())}`)
+                const result = await response.json()
+                if (result.success) {
+                    statusResult.value = result.data
+                } else {
+                    statusResult.value = null
+                    Toast.error(result.message || '查询失败')
+                }
+            } catch (e) {
+                statusResult.value = null
+                Toast.error('网络错误，请检查后端服务')
+            } finally {
+                statusLoading.value = false
+            }
+        }
+
+        const getResetProgressSteps = (result) => {
+            const status = Number(result?.status)
+            return [
+                {
+                    key: 'sent',
+                    index: 1,
+                    title: '请求已经发送到管理员账号',
+                    desc: '系统已记录您的重置申请，并推送到管理员处理列表。',
+                    done: status >= 0,
+                    active: false
+                },
+                {
+                    key: 'waiting',
+                    index: 2,
+                    title: '等待管理员处理',
+                    desc: status === 2 ? '管理员已查看申请，但本次申请未通过。' : '管理员正在审核您的申请，请耐心等待。',
+                    done: status === 1 || status === 2,
+                    active: status === 0
+                },
+                {
+                    key: 'done',
+                    index: 3,
+                    title: status === 2 ? '处理结果已返回' : '处理完成并显示密码',
+                    desc: status === 1
+                        ? '管理员已完成重置，下面会显示可登录的临时密码。'
+                        : status === 2
+                            ? '申请处理结束，结果为拒绝，请联系管理员。'
+                            : '处理完成后，这里会展示新的临时密码。',
+                    done: status === 1 || status === 2,
+                    active: false
+                }
+            ]
+        }
+
+        const getStatusTone = () => {
+            const status = Number(statusResult.value?.status)
+            if (status === 1) {
+                return {
+                    label: '已完成',
+                    badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                }
+            }
+            if (status === 2) {
+                return {
+                    label: '已拒绝',
+                    badge: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300'
+                }
+            }
+            if (status === 0) {
+                return {
+                    label: '处理中',
+                    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                }
+            }
+            return {
+                label: '无记录',
+                badge: 'bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300'
+            }
+        }
+
+        const handleForceChangePwd = async () => {
+            if (!forceChangePwdForm.newPassword || forceChangePwdForm.newPassword.length < 6) {
+                Toast.warning('新密码长度至少6位')
+                return
+            }
+            if (forceChangePwdForm.newPassword !== forceChangePwdForm.confirmPassword) {
+                Toast.warning('两次输入的密码不一致')
+                return
+            }
+
+            forceChangePwdLoading.value = true
+            try {
+                const token = localStorage.getItem('token')
+                const response = await fetch(`${API_BASE}/auth/force-change-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        new_password: forceChangePwdForm.newPassword,
+                        confirm_password: forceChangePwdForm.confirmPassword
+                    })
+                })
+                const result = await response.json()
+                if (result.success) {
+                    Toast.success('密码修改成功，正在进入系统...')
+                    showForceChangePwd.value = false
+                    setTimeout(() => {
+                        window.location.href = 'index.html'
+                    }, 1000)
+                } else {
+                    Toast.error(result.message || '修改失败')
+                }
+            } catch (e) {
+                Toast.error('网络错误，请检查后端服务')
+            } finally {
+                forceChangePwdLoading.value = false
             }
         }
 
@@ -367,10 +630,21 @@ createApp({
             error,
             showPassword,
             showResetDialog,
+            resetTab,
             resetLoading,
             resetForm,
+            statusLoading,
+            statusForm,
+            statusResult,
+            getResetProgressSteps,
+            getStatusTone,
             handleLogin,
-            handleResetPassword
+            handleResetRequest,
+            handleQueryResetStatus,
+            showForceChangePwd,
+            forceChangePwdLoading,
+            forceChangePwdForm,
+            handleForceChangePwd
         }
     }
 }).mount('#app')

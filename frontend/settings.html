@@ -42,7 +42,10 @@
             <a href="favorites.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">favorite</span>我的收藏</a>
             <a href="ai_assistant.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">smart_toy</span>AI 智能助手</a>
             <a v-if="hasCrawlerPerm" href="crawler.html" class="sidebar-item flex items-center gap-3 px-6 py-3 text-sm text-gray-300 hover:text-white"><span class="material-symbols-outlined text-xl">bug_report</span>爬虫任务</a>
-            <a href="settings.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary"><span class="material-symbols-outlined text-xl">settings</span>{{ isAdmin ? '系统设置' : '个人中心' }}</a>
+            <a href="settings.html" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm text-primary relative">
+                <span class="material-symbols-outlined text-xl">settings</span>{{ isAdmin ? '系统设置' : '个人中心' }}
+                <span v-if="isAdmin && pendingResetCount > 0" class="absolute top-2 right-3 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">{{ pendingResetCount > 99 ? '99+' : pendingResetCount }}</span>
+            </a>
         </nav>
         <div class="p-4 border-t border-input-border">
             <div class="flex items-center gap-3">
@@ -58,7 +61,10 @@
             <div class="flex gap-1">
                 <button v-for="t in tabs" :key="t.key" @click="activeTab = t.key"
                         :class="activeTab === t.key ? 'bg-primary/20 text-primary' : 'text-text-secondary hover:text-white hover:bg-input-bg'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">{{ t.label }}</button>
+                        class="relative px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    {{ t.label }}
+                    <span v-if="t.key === 'messages' && pendingResetCount > 0" class="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full px-0.5">{{ pendingResetCount > 99 ? '99+' : pendingResetCount }}</span>
+                </button>
             </div>
         </header>
         <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-background-dark">
@@ -299,6 +305,148 @@
                 </div>
             </div>
 
+            <!-- 消息（密码重置申请） -->
+            <div v-if="activeTab === 'messages'">
+                <div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-gray-200 dark:border-input-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">密码重置申请</h3>
+                        <div class="flex gap-2">
+                            <select v-model="resetReqStatusFilter" @change="loadResetRequests" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm">
+                                <option value="">全部</option>
+                                <option value="0">待处理</option>
+                                <option value="1">已处理</option>
+                                <option value="2">已拒绝</option>
+                            </select>
+                            <button @click="loadResetRequests" class="px-3 py-1.5 bg-input-bg border border-input-border rounded-lg text-sm hover:border-primary">刷新</button>
+                        </div>
+                    </div>
+                    <table class="w-full text-sm">
+                        <thead><tr class="border-b border-input-border text-text-secondary">
+                            <th class="py-3 px-4 text-left">ID</th>
+                            <th class="py-3 px-4 text-left">用户名</th>
+                            <th class="py-3 px-4 text-left">申请原因</th>
+                            <th class="py-3 px-4 text-left">状态</th>
+                            <th class="py-3 px-4 text-left">提交时间</th>
+                            <th class="py-3 px-4 text-left">处理人</th>
+                            <th class="py-3 px-4 text-right">操作</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr v-for="r in resetRequests" :key="r.id" class="border-b border-input-border/30 hover:bg-input-bg/30">
+                                <td class="py-3 px-4">{{ r.id }}</td>
+                                <td class="py-3 px-4 font-medium">{{ r.username }}</td>
+                                <td class="py-3 px-4 text-text-secondary text-xs max-w-xs truncate">{{ r.reason || '-' }}</td>
+                                <td class="py-3 px-4">
+                                    <span v-if="r.status === 0" class="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">待处理</span>
+                                    <span v-else-if="r.status === 1" class="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">已重置</span>
+                                    <span v-else class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">已拒绝</span>
+                                </td>
+                                <td class="py-3 px-4 text-text-secondary text-xs">{{ r.created_at }}</td>
+                                <td class="py-3 px-4 text-text-secondary text-xs">{{ r.handler_username || '-' }}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <template v-if="r.status === 0">
+                                        <button @click="approveResetRequest(r)" class="text-xs px-2 py-1 text-green-400 rounded hover:bg-input-bg">重置密码</button>
+                                        <button @click="rejectResetRequest(r.id)" class="text-xs px-2 py-1 text-red-400 rounded hover:bg-input-bg ml-1">拒绝</button>
+                                    </template>
+                                    <span v-else class="text-xs text-text-secondary">已处理</span>
+                                </td>
+                            </tr>
+                            <tr v-if="resetRequests.length === 0"><td colspan="7" class="py-8 text-center text-text-secondary">暂无申请</td></tr>
+                        </tbody>
+                    </table>
+                    <div v-if="resetReqTotal > 20" class="flex justify-center mt-4 gap-2">
+                        <button @click="resetReqPage > 1 && (resetReqPage--, loadResetRequests())" class="px-3 py-1 bg-input-bg rounded text-sm" :disabled="resetReqPage <= 1">上一页</button>
+                        <span class="px-3 py-1 text-sm text-text-secondary">{{ resetReqPage }} / {{ Math.ceil(resetReqTotal / 20) }}</span>
+                        <button @click="resetReqPage < Math.ceil(resetReqTotal / 20) && (resetReqPage++, loadResetRequests())" class="px-3 py-1 bg-input-bg rounded text-sm">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 重置密码确认弹窗 -->
+            <div v-if="false && resetPwdModal.visible" class="fixed inset-0 bg-black/65 backdrop-blur-md flex items-center justify-center z-50">
+                <div class="relative bg-white dark:bg-card-dark rounded-[28px] max-w-xl w-full mx-4 h-[340px] overflow-hidden border border-gray-200 dark:border-[#2a4a51] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+                    <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-primary/15 via-cyan-200/10 to-transparent pointer-events-none"></div>
+                    <div class="absolute inset-0 z-10 p-7 bg-white dark:bg-card-dark">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-3xl">password</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase mb-3">Admin Action</div>
+                                <h3 class="text-2xl font-black tracking-tight mb-2">重置密码</h3>
+                                <p class="text-sm text-text-secondary leading-6">将为用户 <strong class="text-white">{{ resetPwdModal.username }}</strong> 生成新的临时密码，并要求其在下次登录后立即修改。</p>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-amber-400/15 bg-amber-500/10 px-4 py-3 mb-5">
+                            <div class="text-xs font-bold tracking-[0.14em] uppercase text-amber-300 mb-1">Notice</div>
+                            <div class="text-sm text-amber-100/90 leading-6">重置完成后，用户会被强制修改密码，并且可以在登录页查询到这个临时密码。</div>
+                        </div>
+                        <div class="mb-6">
+                            <label class="text-text-secondary text-xs font-semibold block mb-2">新密码</label>
+                            <input v-model="resetPwdModal.password" type="text" placeholder="默认 123456"
+                                   class="w-full h-12 px-4 bg-input-bg/90 border border-input-border rounded-2xl text-sm font-semibold focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"/>
+                        </div>
+                        <div class="flex gap-3 justify-end">
+                            <button @click="resetPwdModal.visible = false" class="px-5 py-2.5 rounded-2xl bg-input-bg hover:bg-input-border text-sm font-medium transition-colors">取消</button>
+                            <button @click="confirmApproveReset" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-primary to-cyan-400 text-background-dark text-sm font-black tracking-wide hover:brightness-105 transition-all shadow-[0_18px_30px_rgba(19,200,236,0.25)]">确认重置</button>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-4">重置密码</h3>
+                    <p class="text-sm text-text-secondary mb-4">将重置用户 <strong>{{ resetPwdModal.username }}</strong> 的密码</p>
+                    <div class="mb-4">
+                        <label class="text-text-secondary text-xs block mb-1">新密码</label>
+                        <input v-model="resetPwdModal.password" type="text" placeholder="默认 123456"
+                               class="w-full px-3 py-2 bg-input-bg border border-input-border rounded-lg text-sm focus:border-primary outline-none"/>
+                    </div>
+                    <p class="text-xs text-amber-400 mb-4">ℹ️ 重置后用户登录时将被强制修改密码，并收到系统通知。</p>
+                    <div class="flex gap-3 justify-end">
+                        <button @click="resetPwdModal.visible = false" class="px-4 py-2 rounded-lg bg-input-bg hover:bg-input-border text-sm">取消</button>
+                        <button @click="confirmApproveReset" class="px-4 py-2 rounded-lg bg-primary text-background-dark text-sm font-medium hover:bg-primary/90">确认重置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="resetPwdModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(3,10,12,0.76)] backdrop-blur-md">
+                <div class="w-full max-w-[620px] mx-4 overflow-hidden rounded-[30px] border border-[#29464c] bg-[#162a2e] shadow-[0_32px_90px_rgba(0,0,0,0.48)]">
+                    <div class="px-7 pt-7 pb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 shrink-0 rounded-2xl bg-[#123540] text-[#21c8f6] flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="inline-flex items-center rounded-full bg-[#123540] text-[#21c8f6] px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase mb-3">Admin Action</div>
+                                <h3 class="text-[34px] leading-none font-black tracking-tight text-white">重置密码</h3>
+                                <p class="mt-3 text-[15px] leading-6 text-[#98b5bc]">
+                                    将为用户 <strong class="text-white">{{ resetPwdModal.username }}</strong> 生成新的临时密码，并要求其在下次登录后立即修改。
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 rounded-2xl border border-[#244047] bg-[#20363b] px-5 py-4 text-[14px] leading-6 text-[#a9c0c7]">
+                            用户重置后将被强制修改密码，并且可以在登录页查询到本次生成的临时密码。
+                        </div>
+
+                        <div class="mt-6">
+                            <label class="block text-sm font-semibold text-[#dce7ea] mb-2">新密码</label>
+                            <input
+                                v-model="resetPwdModal.password"
+                                type="text"
+                                placeholder="默认 123456"
+                                class="w-full h-14 px-4 rounded-2xl bg-[#12262a] border border-[#2a4b52] text-white placeholder:text-[#6f8f96] focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-base"
+                            />
+                        </div>
+
+                        <div class="mt-7 flex justify-end gap-3">
+                            <button @click="resetPwdModal.visible = false" class="inline-flex h-12 px-6 items-center justify-center rounded-2xl bg-[#22373c] text-[#c7d7db] text-sm font-semibold hover:bg-[#294247] transition-colors">
+                                取消
+                            </button>
+                            <button @click="confirmApproveReset" class="inline-flex h-12 px-6 items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-cyan-400 text-[#102226] text-sm font-black tracking-wide hover:brightness-105 transition-all shadow-[0_18px_34px_rgba(19,200,236,0.22)]">
+                                确认重置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 </div>
@@ -320,6 +468,7 @@ createApp({
             { key: 'profile', label: '个人信息' },
             { key: 'users', label: '用户管理' },
             { key: 'roles', label: '角色权限' },
+            { key: 'messages', label: '消息' },
             { key: 'logs', label: '操作日志' },
             { key: 'report', label: '数据报告' },
         ]
@@ -342,6 +491,14 @@ createApp({
         const reportStartDate = ref('')
         const reportEndDate = ref('')
         const reportJson = ref(null)
+
+        // 密码重置申请相关
+        const resetRequests = ref([])
+        const resetReqPage = ref(1)
+        const resetReqTotal = ref(0)
+        const resetReqStatusFilter = ref('')
+        const pendingResetCount = ref(0)
+        const resetPwdModal = reactive({ visible: false, reqId: null, username: '', password: '123456' })
 
         function getToken() { return localStorage.getItem('token') }
         async function apiFetch(url, options = {}) {
@@ -540,6 +697,61 @@ createApp({
 
         function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'login.html' }
 
+        // 密码重置申请管理
+        async function loadResetRequests() {
+            let url = `/settings/reset_requests?page=${resetReqPage.value}&page_size=20`
+            if (resetReqStatusFilter.value !== '') url += `&status=${resetReqStatusFilter.value}`
+            const res = await apiFetch(url)
+            if (res.code === 0) {
+                resetRequests.value = res.data.list
+                resetReqTotal.value = res.data.total
+            }
+        }
+
+        async function loadPendingResetCount() {
+            try {
+                const res = await apiFetch('/settings/reset_requests/pending_count')
+                if (res.code === 0) pendingResetCount.value = res.data.count
+            } catch(e) {}
+        }
+
+        function approveResetRequest(r) {
+            resetPwdModal.reqId = r.id
+            resetPwdModal.username = r.username
+            resetPwdModal.password = '123456'
+            resetPwdModal.visible = true
+        }
+
+        async function confirmApproveReset() {
+            const res = await apiFetch(`/settings/reset_requests/${resetPwdModal.reqId}/handle`, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'approve', password: resetPwdModal.password })
+            })
+            if (res.code === 0) {
+                window.Toast?.success(res.msg)
+                resetPwdModal.visible = false
+                loadResetRequests()
+                loadPendingResetCount()
+            } else {
+                window.Toast?.error(res.msg)
+            }
+        }
+
+        async function rejectResetRequest(reqId) {
+            if (!confirm('确定拒绝该申请？')) return
+            const res = await apiFetch(`/settings/reset_requests/${reqId}/handle`, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'reject' })
+            })
+            if (res.code === 0) {
+                window.Toast?.success(res.msg)
+                loadResetRequests()
+                loadPendingResetCount()
+            } else {
+                window.Toast?.error(res.msg)
+            }
+        }
+
         onMounted(() => {
             const token = getToken()
             if (!token) { window.location.href = 'login.html'; return }
@@ -558,6 +770,8 @@ createApp({
                 loadUsers()
                 loadRoles()
                 loadLogs()
+                loadResetRequests()
+                loadPendingResetCount()
             } else {
                 // 观察者只显示个人信息
                 tabs.value = [{ key: 'profile', label: '个人信息' }]
@@ -575,7 +789,10 @@ createApp({
             roleModal, showRoleModal, changeUserRole,
             loadUsers, toggleUserStatus, resetUserPwd, deleteUser,
             loadRoles, togglePerm, saveRolePerms, loadLogs,
-            generateReport, handleLogout
+            generateReport, handleLogout,
+            resetRequests, resetReqPage, resetReqTotal, resetReqStatusFilter,
+            pendingResetCount, resetPwdModal,
+            loadResetRequests, approveResetRequest, confirmApproveReset, rejectResetRequest
         }
     }
 }).mount('#app')
