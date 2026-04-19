@@ -27,7 +27,7 @@ class Config:
     MQ_PASSWORD = os.getenv('MQ_PASSWORD', 'guest')
     
     # API Token
-    API_TOKEN = os.getenv('API_TOKEN', 'a4535b9c14e049f8ae3e6d35498be877')
+    API_TOKEN = os.getenv('API_TOKEN', '8d25853f4fde7e460731e890f7284f8f')
 
     # HTTP 代理配置（用于爬虫请求，防止 IP 被封）
     PROXY_URL = os.getenv('PROXY_URL', '')
