@@ -32,6 +32,7 @@
 **DY Analysis System** 是一个面向抖音电商（Douyin 小店）场景的数据分析与决策支持平台。系统从抖音官方 API 自动采集商品、直播、视频、达人等多维度数据，经过清洗、分析后在 Web 端以图表、大屏、词云等形式呈现，并集成了基于智谱 GLM-4 的 AI 助手，支持自然语言查询数据库。
 
 **适用角色**：
+
 - 抖音小店运营者：追踪竞品动态、发现热销品类
 - 电商数据分析师：构建数据看板、导出报表
 - 品牌方/投放方：预测热点商品、优化投放策略
@@ -69,6 +70,7 @@
 ```
 
 **数据流**：
+
 ```
 用户提交任务
     → list_q
@@ -111,6 +113,7 @@
 **功能**：用户注册/登录、JWT Token 签发、基于角色的访问控制（RBAC）。
 
 **角色体系**：
+
 - `admin`：全部权限（用户管理、爬虫、数据读写、导出）
 - `operator`：爬虫操作 + 数据管理权限
 - `observer`：只读权限
@@ -465,6 +468,7 @@ GET /api/export/goods/json?keyword=蛋白粉&sort_by=sales_count
 **功能**：管理员可创建/编辑用户，分配角色，启用/禁用账号。
 
 **接口（需 admin 权限）**：
+
 - `GET /api/settings/users` — 用户列表
 - `POST /api/settings/users` — 创建用户
 - `PUT /api/settings/users/<id>` — 更新用户信息/角色
@@ -654,7 +658,7 @@ Authorization: Bearer <your_jwt_token>
 | | GET | `/auth/info` | 获取当前用户信息 |
 | | POST | `/auth/change-password` | 修改密码 |
 | **商品** | GET | `/goods/list` | 商品列表（分页/筛选） |
-| | GET | `/goods/<product_id>` | 商品详情 |
+| | GET | `/goods/` | 商品详情 |
 | | GET | `/goods/search` | 关键词搜索 |
 | | GET | `/goods/by-category` | 按分类查询 |
 | | GET | `/goods/stats` | 商品统计 |
@@ -668,7 +672,7 @@ Authorization: Bearer <your_jwt_token>
 | | GET | `/prediction/wordcloud` | 词云数据 |
 | **AI** | POST | `/ai/chat` | 发送消息 |
 | | GET | `/ai/sessions` | 会话列表 |
-| | GET | `/ai/messages/<session_id>` | 聊天历史 |
+| | GET | `/ai/messages/` | 聊天历史 |
 | **导出** | GET | `/export/goods/csv` | 导出 CSV |
 | | GET | `/export/goods/json` | 导出 JSON |
 | **任务** | POST | `/mq/start_list_crawler` | 触发爬虫任务 |
@@ -750,3 +754,5 @@ DY_Predictionin/
 ```
 
 ---
+
+
